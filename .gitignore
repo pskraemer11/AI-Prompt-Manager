@@ -6,3 +6,9 @@ prompt-manager-backup-*.json
 # =================== OS / editor junk ===================
 Thumbs.db
 Desktop.ini
+
+# =================== Private project docs ===================
+# Personal changelog/compaction notes live in the private workspace
+# (AI+IDE-Hints), never in this public repository.
+CHANGELOG.md
+COMPACTIONS.md
