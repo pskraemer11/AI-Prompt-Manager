@@ -1,0 +1,2290 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--
+        Prompt Manager Pro — lokale Promptverwaltung (einzelne HTML-Datei)
+        Copyright (C) 2026 pskraemer11
+
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+        SPDX-License-Identifier: GPL-3.0-or-later
+    -->
+    <title>Prompt Manager Pro - Optimierte Version</title>
+    <style>
+        /* Reset und Basis-Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* Container Layout - VERBESSERT: Flexibles Grid statt feste Höhe */
+        .container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            grid-template-rows: 1fr;
+            gap: 0;
+            height: calc(100vh - 40px);
+            background: white;
+            margin: 20px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* Sidebar - VERBESSERT: Bessere Struktur */
+        .sidebar {
+            background: #f8fafc;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            min-height: 0; /* WICHTIG: Verhindert Overflow-Probleme */
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #4f46e5;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        /* VERBESSERT: Button mit besserem Feedback */
+        .btn-manage-categories {
+            width: 100%;
+            padding: 8px 12px;
+            background: #e0e7ff;
+            color: #4f46e5;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-manage-categories:hover {
+            background: #4f46e5;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        /* VERBESSERT: Scrollbarer Bereich mit Performance-Optimierung */
+        .category-section {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            /* Performance: Nur sichtbare Elemente rendern */
+            contain: layout style paint;
+        }
+
+        .category-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* VERBESSERT: Kategorie-Items mit besserer Performance */
+        .category-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            margin-bottom: 4px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            user-select: none;
+        }
+
+        .category-item:hover {
+            background: #e0e7ff;
+            color: #4f46e5;
+        }
+
+        .category-item.active {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .category-icon {
+            margin-right: 10px;
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .category-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+        }
+
+        .category-count {
+            margin-left: 8px;
+            background: #e2e8f0;
+            color: #64748b;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            min-width: 24px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 0;
+        }
+
+        .header {
+            padding: 20px 25px;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            flex-shrink: 0;
+        }
+
+        .search-container {
+            position: relative;
+            flex: 1;
+            max-width: 400px;
+            min-width: 200px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 45px 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #4338ca;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-danger {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        .btn-danger:hover {
+            background: #fecaca;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            background: #fafafa;
+            /* Performance-Optimierung für große Listen */
+            contain: layout style paint;
+        }
+
+        .prompt-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .prompt-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+
+        .prompt-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .prompt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            gap: 10px;
+        }
+
+        .prompt-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+            line-height: 1.3;
+            word-break: break-word;
+        }
+
+        .prompt-category {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            background: #e0e7ff;
+            color: #4f46e5;
+        }
+
+        .prompt-content {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .prompt-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .prompt-tags {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            background: #f1f5f9;
+            color: #475569;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        /* Modal-Styles - VERBESSERT: Bessere Performance */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            overflow-y: auto;
+            /* Performance: GPU-Beschleunigung */
+            will-change: opacity;
+        }
+
+        .modal-content {
+            position: relative;
+            background: white;
+            margin: 50px auto;
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            /* Performance: Bessere Animation */
+            transform: translateZ(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .modal-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #94a3b8;
+            line-height: 1;
+            padding: 0;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            background: #f1f5f9;
+            color: #374151;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #374151;
+            font-size: 14px;
+        }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        /* Markdown-Vorschau und Markdown-Inhalte (Stil angelehnt an GitHub) */
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .form-hint {
+            font-size: 12px;
+            font-weight: 400;
+            color: #94a3b8;
+        }
+
+        .markdown-preview {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            background: #fafafa;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 14px;
+            color: #374151;
+        }
+
+        .markdown-body {
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+
+        .markdown-body h1, .markdown-body h2, .markdown-body h3,
+        .markdown-body h4, .markdown-body h5, .markdown-body h6 {
+            font-weight: 600;
+            margin: 0.8em 0 0.4em;
+            color: #1e293b;
+            line-height: 1.3;
+        }
+
+        .markdown-body h1 { font-size: 1.5em; }
+        .markdown-body h2 { font-size: 1.3em; }
+        .markdown-body h3 { font-size: 1.15em; }
+        .markdown-body h4, .markdown-body h5, .markdown-body h6 { font-size: 1em; }
+
+        .markdown-body p { margin: 0.5em 0; }
+
+        .markdown-body ul, .markdown-body ol {
+            margin: 0.5em 0;
+            padding-left: 1.6em;
+        }
+
+        .markdown-body blockquote {
+            margin: 0.5em 0;
+            padding: 2px 12px;
+            border-left: 4px solid #d0d7de;
+            color: #57606a;
+        }
+
+        .markdown-body code {
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-size: 0.9em;
+            background: #eef2f7;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        .markdown-body pre {
+            background: #f6f8fa;
+            border-radius: 6px;
+            padding: 10px 12px;
+            overflow-x: auto;
+            margin: 0.5em 0;
+        }
+
+        .markdown-body pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .markdown-body table {
+            border-collapse: collapse;
+            margin: 0.5em 0;
+        }
+
+        .markdown-body th, .markdown-body td {
+            border: 1px solid #d0d7de;
+            padding: 4px 10px;
+        }
+
+        .markdown-body th { background: #f6f8fa; }
+
+        .markdown-body a { color: #4f46e5; }
+
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid #e2e8f0;
+            margin: 1em 0;
+        }
+
+        .markdown-body del { color: #94a3b8; }
+
+        .markdown-body img {
+            max-width: 100%;
+        }
+
+        .markdown-body li.task {
+            list-style: none;
+            margin-left: -1.2em;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 2000;
+            max-width: 300px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            background: #ef4444;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #94a3b8;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-title {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: #64748b;
+        }
+
+        /* Responsive Design - VERBESSERT: Bessere Breakpoints */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+                height: calc(100vh - 20px);
+                margin: 10px;
+            }
+            
+            .sidebar {
+                max-height: 200px;
+                overflow-y: auto;
+            }
+            
+            .prompt-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-container {
+                max-width: 100%;
+            }
+            
+            .action-buttons {
+                justify-content: center;
+            }
+        }
+
+        /* Performance: Reduzierte Animationen bei schwachen Geräten */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Utility Classes */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-1 { margin-top: 0.25rem; }
+        .mt-2 { margin-top: 0.5rem; }
+        .mt-3 { margin-top: 1rem; }
+        .mb-1 { margin-bottom: 0.25rem; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-3 { margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <!-- 
+        HAUPTSTRUKTUR:
+        - Container: Grid-Layout für Sidebar + Main
+        - Sidebar: Kategorien und Navigation
+        - Main: Suchfeld, Aktionen, Content-Bereich
+    -->
+    <div class="container">
+        <!-- SIDEBAR: Navigation und Kategorien -->
+        <aside class="sidebar" role="navigation" aria-label="Hauptnavigation">
+            <div class="sidebar-header">
+                <h1 class="logo">🚀 Prompt Manager</h1>
+                <button class="btn-manage-categories" onclick="showCategoryManager()" aria-label="Kategorien verwalten">
+                    ⚙️ Kategorien
+                </button>
+            </div>
+            
+            <div class="category-section" id="categoryList" role="menu">
+                <!-- Kategorien werden dynamisch eingefügt -->
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="category-title">Verwaltung</div>
+                <button class="control-item" onclick="exportData()" aria-label="Daten exportieren">
+                    📤 Export
+                </button>
+                <button class="control-item" onclick="importData()" aria-label="Daten importieren">
+                    📥 Import
+                </button>
+                <button class="control-item" onclick="showHelp()" aria-label="Hilfe anzeigen">
+                    ❓ Hilfe
+                </button>
+            </div>
+        </aside>
+
+        <!-- HAUPTBEREICH: Inhalt und Interaktionen -->
+        <main class="main-content">
+            <header class="header">
+                <div class="search-container">
+                    <label for="searchInput" class="sr-only">Prompts durchsuchen</label>
+                    <input type="text" id="searchInput" class="search-input" placeholder="Prompts durchsuchen..." aria-label="Suchfeld">
+                    <span class="search-icon" aria-hidden="true">🔍</span>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="showImportHFModal()" aria-label="Chatverlauf einfügen">
+                        📋 Chatverlauf einfügen
+                    </button>
+                    <button class="btn btn-primary" onclick="showAddModal()" aria-label="Neuen Prompt erstellen">
+                        ➕ Neuer Prompt
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-area" id="contentArea">
+                <div class="prompt-grid" id="promptGrid" role="list" aria-label="Prompt Liste">
+                    <!-- Prompts werden dynamisch eingefügt -->
+                </div>
+                
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <div class="empty-icon" aria-hidden="true">📝</div>
+                    <div class="empty-title">Noch keine Prompts vorhanden</div>
+                    <p>Erstelle deinen ersten Prompt oder importiere Chatverläufe!</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODALS: Strukturiert und barrierefrei -->
+    
+    <!-- Modal: Neuer/Bearbeiten Prompt -->
+    <div class="modal" id="addModal" role="dialog" aria-labelledby="addModalTitle" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="addModalTitle">Neuen Prompt erstellen</h3>
+                <button class="close-btn" onclick="closeModal('addModal')" aria-label="Modal schließen">&times;</button>
+            </div>
+            <form id="promptForm" novalidate>
+                <div class="form-group">
+                    <label for="promptTitle" class="form-label">Titel *</label>
+                    <input type="text" id="promptTitle" class="form-input" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="promptCategory" class="form-label">Kategorie *</label>
+                    <select id="promptCategory" class="form-select" required aria-required="true">
+                        <!-- Optionen werden dynamisch gefüllt -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="promptContent" class="form-label">Prompt / Chatverlauf *</label>
+                    <textarea id="promptContent" class="form-textarea" required aria-required="true" rows="6"></textarea>
+                </div>
+                <div class="form-group">
+                    <div class="label-row">
+                        <label class="form-label" style="margin-bottom: 0;">Markdown-Vorschau <span class="form-hint">Formatierungen werden als solche gerendert</span></label>
+                        <button type="button" id="previewToggle" class="btn btn-secondary btn-small" aria-pressed="true">Vorschau ausblenden</button>
+                    </div>
+                    <div id="markdownPreview" class="markdown-preview markdown-body" role="region" aria-label="Markdown-Vorschau"></div>
+                </div>
+                <div class="form-group">
+                    <label for="promptTags" class="form-label">Tags (kommagetrennt)</label>
+                    <input type="text" id="promptTags" class="form-input" placeholder="z.B. python, automation, ki">
+                </div>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addModal')">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Kategorien verwalten -->
+    <div class="modal" id="categoryManagerModal" role="dialog" aria-labelledby="categoryManagerTitle" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="categoryManagerTitle">Kategorien verwalten</h3>
+                <button class="close-btn" onclick="closeModal('categoryManagerModal')" aria-label="Modal schließen">&times;</button>
+            </div>
+            
+            <!-- INFO: Sicherheitshinweis für Benutzer -->
+            <div style="background: #fef3c7; padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; color: #92400e;">
+                <strong>💡 Hinweis:</strong> Kategorien mit zugeordneten Prompts können nicht gelöscht werden.
+            </div>
+
+            <!-- Formular: Neue Kategorie -->
+            <div style="margin-bottom: 25px; padding: 20px; background: #f8fafc; border-radius: 10px;">
+                <h4 style="margin-bottom: 15px; color: #374151;">Neue Kategorie erstellen</h4>
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: end;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="newCategoryName" class="form-label">Name *</label>
+                        <input type="text" id="newCategoryName" class="form-input" placeholder="z.B. Recht, Gesundheit, Bildung">
+                    </div>
+                    <button class="btn btn-primary" onclick="addNewCategory()">Hinzufügen</button>
+                </div>
+            </div>
+
+            <!-- Liste: Vorhandene Kategorien -->
+            <div class="category-list" id="categoryManagementList">
+                <!-- Wird dynamisch gefüllt -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: HF Chat Import -->
+    <div class="modal" id="importHFModal" role="dialog" aria-labelledby="importHFModalTitle" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="importHFModalTitle">Chatverlauf einfügen</h3>
+                <button class="close-btn" onclick="closeModal('importHFModal')" aria-label="Modal schließen">&times;</button>
+            </div>
+            <div class="form-group">
+                <label for="hfChatContent" class="form-label">Chatverlauf</label>
+                <textarea id="hfChatContent" class="form-textarea" rows="10" placeholder="Füge hier den kompletten Chatverlauf ein (aus einer beliebigen Chat-KI kopiert)..." aria-label="Chatverlauf"></textarea>
+            </div>
+            <div class="form-group">
+                <div class="label-row">
+                    <label class="form-label" style="margin-bottom: 0;">Markdown-Vorschau <span class="form-hint">Formatierungen werden als solche gerendert</span></label>
+                    <button type="button" id="chatPreviewToggle" class="btn btn-secondary btn-small" aria-pressed="true">Vorschau ausblenden</button>
+                </div>
+                <div id="chatMarkdownPreview" class="markdown-preview markdown-body" role="region" aria-label="Markdown-Vorschau"></div>
+            </div>
+            <div class="form-group">
+                <label for="hfImportCategory" class="form-label">Kategorie zuordnen</label>
+                <select id="hfImportCategory" class="form-select">
+                    <!-- Optionen werden dynamisch gefüllt -->
+                </select>
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('importHFModal')">Abbrechen</button>
+                <button type="button" class="btn btn-primary" onclick="importHFChat()">Importieren</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Prompt anzeigen -->
+    <div class="modal" id="viewModal" role="dialog" aria-labelledby="viewModalTitle" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="viewModalTitle"></h3>
+                <button class="close-btn" onclick="closeModal('viewModal')" aria-label="Modal schließen">&times;</button>
+            </div>
+            <div id="viewContent"></div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="copyPrompt()">📋 Kopieren</button>
+                <button class="btn btn-primary" onclick="editCurrentPrompt()">✏️ Bearbeiten</button>
+                <button class="btn btn-danger" onclick="deleteCurrentPrompt()">🗑️ Löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Hilfe -->
+    <div class="modal" id="helpModal" role="dialog" aria-labelledby="helpModalTitle" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="helpModalTitle">Hilfe & Tipps</h3>
+                <button class="close-btn" onclick="closeModal('helpModal')" aria-label="Modal schließen">&times;</button>
+            </div>
+            <div style="line-height: 1.6; color: #374151;">
+                <h4 style="margin-bottom: 10px; color: #1e293b;">🎯 Wichtige Funktionen</h4>
+                <ul style="margin-left: 20px; margin-bottom: 20px;">
+                    <li><strong>Kategorien verwalten:</strong> Erstelle eigene Themenfelder mit individuellen Icons</li>
+                    <li><strong>Neue Prompts einfügen:</strong> Nutze das "+" Symbol für neue Prompts</li>
+                    <li><strong>Chat einfügen:</strong> Füge Chatverlauf hier ein</li>
+                    <li><strong>Import:</strong> Bestehende Daten bleiben erhalten, Doppelungen werden übersprungen</li>
+                    <li><strong>Backup:</strong> Exportiere deine Daten regelmäßig als JSON</li>
+                </ul>
+                <h4 style="margin-bottom: 10px; color: #1e293b;">💾 Datensicherheit</h4>
+                <p>Alle Daten werden <strong>lokal in deinem Browser</strong> gespeichert. 
+                Lösche den Browser-Cache nicht, sonst sind die Daten weg! Nutze regelmäßig die Export-Funktion.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Benachrichtigung -->
+    <div class="notification" id="notification" role="alert" aria-live="polite"></div>
+
+    <script>
+        /**
+         * PROMPT MANAGER PRO - OPTIMIERTE VERSION
+         * 
+         * Diese Anwendung verwendet:
+         * - Modularer Code mit klaren Trennungen
+         * - Event-Delegation statt vieler einzelner Listener
+         * - Debouncing für Suchfunktionen
+         * - Fehlerbehandlung für alle kritischen Operationen
+         * - Performance-Optimierungen für große Datenmengen
+         */
+
+        'use strict';
+
+        // ============================================================================
+        // KONFIGURATION UND GLOBALE VARIABLEN
+        // ============================================================================
+
+        const CONFIG = {
+            STORAGE_KEYS: {
+                CATEGORIES: 'promptCategories_v2',
+                PROMPTS: 'prompts_v2'
+            },
+            DEFAULT_CATEGORIES: [
+                { id: 'coding', name: 'Programmierung', icon: '💻' },
+                { id: 'marketing', name: 'Marketing', icon: '📈' },
+                { id: 'research', name: 'Forschung', icon: '🔬' },
+                { id: 'creative', name: 'Kreatives', icon: '🎨' },
+                { id: 'business', name: 'Business', icon: '💼' }
+            ],
+            MAX_TITLE_LENGTH: 100,
+            MAX_CONTENT_LENGTH: 50000,
+            DEBOUNCE_DELAY: 300
+        };
+
+        // Anwendungsstatus
+        let appState = {
+            categories: [],
+            prompts: [],
+            currentCategory: 'all',
+            currentPromptId: null,
+            editingPromptId: null,
+            isInitialized: false
+        };
+
+        // Debounce-Funktion für Performance
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // ============================================================================
+        // DATENVERWALTUNG - SICHERE LOCALSTORAGE-OPERATIONEN
+        // ============================================================================
+
+        /**
+         * Lädt Daten aus LocalStorage mit Fehlerbehandlung
+         */
+        function loadData() {
+            try {
+                // Kategorien laden
+                const storedCategories = localStorage.getItem(CONFIG.STORAGE_KEYS.CATEGORIES);
+                appState.categories = storedCategories ? JSON.parse(storedCategories) : [...CONFIG.DEFAULT_CATEGORIES];
+                
+                // Prompts laden
+                const storedPrompts = localStorage.getItem(CONFIG.STORAGE_KEYS.PROMPTS);
+                appState.prompts = storedPrompts ? JSON.parse(storedPrompts) : [];
+                
+                // Datenvalidierung
+                validateData();
+                
+                console.log('✅ Daten erfolgreich geladen:', {
+                    categories: appState.categories.length,
+                    prompts: appState.prompts.length
+                });
+                
+            } catch (error) {
+                console.error('❌ Fehler beim Laden der Daten:', error);
+                showNotification('Fehler beim Laden der Daten. Standardwerte werden verwendet.', true);
+                
+                // Fallback auf Standardwerte
+                appState.categories = [...CONFIG.DEFAULT_CATEGORIES];
+                appState.prompts = [];
+            }
+        }
+
+        /**
+         * Speichert Daten sicher im LocalStorage
+         */
+        function saveData() {
+            try {
+                localStorage.setItem(CONFIG.STORAGE_KEYS.CATEGORIES, JSON.stringify(appState.categories));
+                localStorage.setItem(CONFIG.STORAGE_KEYS.PROMPTS, JSON.stringify(appState.prompts));
+                console.log('💾 Daten gespeichert');
+            } catch (error) {
+                console.error('❌ Fehler beim Speichern:', error);
+                showNotification('Fehler beim Speichern. Speicherplatz voll?', true);
+            }
+        }
+
+        /**
+         * Validiert geladene Daten auf Konsistenz
+         */
+        function validateData() {
+            // Sicherstellen, dass alle Prompts eine gültige Kategorie haben
+            const validCategoryIds = new Set(appState.categories.map(cat => cat.id));
+            validCategoryIds.add('all');
+            
+            appState.prompts = appState.prompts.filter(prompt => {
+                if (!prompt || !prompt.id) return false;
+                if (!validCategoryIds.has(prompt.category)) {
+                    console.warn('⚠️ Prompt mit ungültiger Kategorie gefunden:', prompt.category);
+                    prompt.category = appState.categories[0]?.id || 'coding';
+                }
+                return true;
+            });
+        }
+
+        // ============================================================================
+        // RENDER-FUNKTIONEN - PERFORMANCE-OPTIMIERT
+        // ============================================================================
+
+        /**
+         * Rendert alle Kategorien in der Sidebar
+         * OPTIMIERUNG: Verwendet DocumentFragment für bessere Performance
+         */
+        function renderCategories() {
+            const container = document.getElementById('categoryList');
+            if (!container) return;
+
+            const fragment = document.createDocumentFragment();
+
+            // Header für "Alle Prompts"
+            const allItem = createCategoryElement('all', '📊', 'Alle Prompts', appState.prompts.length, appState.currentCategory === 'all');
+            fragment.appendChild(allItem);
+
+            // Einzelne Kategorien
+            appState.categories.forEach(category => {
+                const count = appState.prompts.filter(p => p.category === category.id).length;
+                const isActive = appState.currentCategory === category.id;
+                const element = createCategoryElement(category.id, category.icon, category.name, count, isActive);
+                fragment.appendChild(element);
+            });
+
+            // Container leeren und neu füllen
+            container.innerHTML = '';
+            container.appendChild(fragment);
+
+            // Dropdowns aktualisieren
+            updateCategoryDropdowns();
+        }
+
+        /**
+         * Erstellt ein einzelnes Kategorie-Element mit Event-Listener
+         */
+        function createCategoryElement(id, icon, name, count, isActive) {
+            const div = document.createElement('div');
+            div.className = `category-item ${isActive ? 'active' : ''}`;
+            div.setAttribute('role', 'menuitem');
+            div.setAttribute('tabindex', '0');
+            div.onclick = () => selectCategory(id);
+            div.onkeypress = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    selectCategory(id);
+                }
+            };
+
+            div.innerHTML = `
+                <span class="category-icon">${icon}</span>
+                <span class="category-name">${name}</span>
+                <span class="category-count">${count}</span>
+            `;
+
+            return div;
+        }
+
+        /**
+         * Aktualisiert Kategorie-Dropdowns in allen Formularen
+         */
+        function updateCategoryDropdowns() {
+            const dropdowns = [
+                document.getElementById('promptCategory'),
+                document.getElementById('hfImportCategory')
+            ];
+
+            dropdowns.forEach(dropdown => {
+                if (!dropdown) return;
+                
+                const currentValue = dropdown.value;
+                dropdown.innerHTML = appState.categories.map(cat => 
+                    `<option value="${cat.id}">${cat.icon} ${cat.name}</option>`
+                ).join('');
+                
+                // Versuchen, vorherige Auswahl beizubehalten
+                if (currentValue && appState.categories.some(c => c.id === currentValue)) {
+                    dropdown.value = currentValue;
+                }
+            });
+        }
+
+        /**
+         * Rendert Prompts mit Such- und Filterfunktion
+         * OPTIMIERUNG: Verwendet DocumentFragment und effiziente Filterung
+         */
+        function renderPrompts() {
+            const grid = document.getElementById('promptGrid');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (!grid || !emptyState) return;
+
+            const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
+            
+            // Effiziente Filterung mit frühem Abbruch
+            let filtered = appState.prompts;
+            
+            if (appState.currentCategory !== 'all') {
+                filtered = filtered.filter(p => p.category === appState.currentCategory);
+            }
+            
+            if (searchTerm) {
+                filtered = filtered.filter(p => 
+                    p.title.toLowerCase().includes(searchTerm) ||
+                    p.content.toLowerCase().includes(searchTerm) ||
+                    p.tags.some(tag => tag.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            // Sortierung (neueste zuerst)
+            filtered.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+            // Leeren Zustand behandeln
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            // Performance: DocumentFragment für schnelles Rendering
+            const fragment = document.createDocumentFragment();
+            
+            filtered.forEach(prompt => {
+                const category = appState.categories.find(c => c.id === prompt.category) || 
+                               { name: 'Unkategorisiert', icon: '📁' };
+                
+                const card = createPromptCard(prompt, category);
+                fragment.appendChild(card);
+            });
+
+            grid.innerHTML = '';
+            grid.appendChild(fragment);
+        }
+
+        /**
+         * Erstellt eine einzelne Prompt-Karte
+         */
+        function createPromptCard(prompt, category) {
+            const div = document.createElement('div');
+            div.className = 'prompt-card';
+            div.setAttribute('role', 'listitem');
+            div.setAttribute('tabindex', '0');
+            div.onclick = () => viewPrompt(prompt.id);
+            div.onkeypress = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    viewPrompt(prompt.id);
+                }
+            };
+
+            div.innerHTML = `
+                <div class="prompt-header">
+                    <div style="min-width: 0;">
+                        <div class="prompt-title" title="${escapeHtml(prompt.title)}">${escapeHtml(prompt.title)}</div>
+                    </div>
+                    <div class="prompt-category">
+                        ${escapeHtml(category.icon)} ${escapeHtml(category.name)}
+                    </div>
+                </div>
+                <div class="prompt-content">${escapeHtml(prompt.content)}</div>
+                <div class="prompt-meta">
+                    <div class="prompt-tags">
+                        ${prompt.tags.slice(0, 3).map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
+                        ${prompt.tags.length > 3 ? `<span class="tag">+${prompt.tags.length - 3}</span>` : ''}
+                    </div>
+                    <div>${new Date(prompt.updatedAt).toLocaleDateString('de-DE')}</div>
+                </div>
+            `;
+
+            return div;
+        }
+
+        // ============================================================================
+        // KATEGORIE-VERWALTUNG
+        // ============================================================================
+
+        /**
+         * Zeigt den Kategorie-Manager an
+         */
+        function showCategoryManager() {
+            renderCategoryManagementList();
+            openModal('categoryManagerModal');
+        }
+
+        /**
+         * Rendert die Liste der verwaltbaren Kategorien
+         */
+        function renderCategoryManagementList() {
+            const container = document.getElementById('categoryManagementList');
+            if (!container) return;
+
+            container.innerHTML = '<h4 style="margin-bottom: 15px; color: #374151;">Vorhandene Kategorien</h4>';
+
+            if (appState.categories.length === 0) {
+                container.innerHTML += '<p style="color: #94a3b8;">Noch keine Kategorien vorhanden.</p>';
+                return;
+            }
+
+            // Erstelle Liste mit DocumentFragment
+            const fragment = document.createDocumentFragment();
+
+            appState.categories.forEach(category => {
+                const promptCount = appState.prompts.filter(p => p.category === category.id).length;
+                const canDelete = promptCount === 0;
+
+                const item = document.createElement('div');
+                item.className = 'category-list-item';
+                item.innerHTML = `
+                    <div class="category-icon-display">${escapeHtml(category.icon)}</div>
+                    <div class="category-info">
+                        <div class="category-name-display">${escapeHtml(category.name)}</div>
+                        <div class="category-prompt-count">${promptCount} Prompt${promptCount !== 1 ? 's' : ''}</div>
+                    </div>
+                    <div class="category-actions">
+                        <button class="btn btn-secondary btn-small" onclick="editCategory('${category.id}')">Bearbeiten</button>
+                        ${canDelete ? 
+                            `<button class="btn btn-danger btn-small" onclick="deleteCategory('${category.id}')">Löschen</button>` : 
+                            `<button class="btn btn-secondary btn-small" disabled title="Zuerst Prompts löschen" style="opacity: 0.5;">Löschen</button>`
+                        }
+                    </div>
+                `;
+                fragment.appendChild(item);
+            });
+
+            container.appendChild(fragment);
+        }
+
+        /**
+         * Fügt eine neue Kategorie hinzu
+         */
+        function addNewCategory() {
+            const nameInput = document.getElementById('newCategoryName');
+            const name = nameInput?.value.trim();
+
+            if (!name) {
+                showNotification('Bitte gib einen Namen ein!', true);
+                return;
+            }
+
+            if (name.length > 50) {
+                showNotification('Name zu lang (max. 50 Zeichen)!', true);
+                return;
+            }
+
+            // Prüfen auf Duplikate (case-insensitive)
+            const exists = appState.categories.some(cat => 
+                cat.name.toLowerCase() === name.toLowerCase()
+            );
+
+            if (exists) {
+                showNotification('Diese Kategorie existiert bereits!', true);
+                return;
+            }
+
+            // Neue Kategorie erstellen
+            const newCategory = {
+                id: 'cat_' + Date.now(), // Eindeutige ID
+                name: name,
+                icon: '📁' // Standard-Icon
+            };
+
+            appState.categories.push(newCategory);
+            saveData();
+
+            // Formular zurücksetzen
+            nameInput.value = '';
+
+            // UI aktualisieren
+            renderCategories();
+            renderCategoryManagementList();
+            showNotification('Kategorie hinzugefügt!');
+        }
+
+        /**
+         * Bearbeitet eine vorhandene Kategorie
+         */
+        function editCategory(catId) {
+            const category = appState.categories.find(c => c.id === catId);
+            if (!category) return;
+
+            // Einfaches Prompt für Namensänderung
+            const newName = prompt(`Kategorie "${category.name}" umbenennen:`, category.name);
+            
+            if (newName === null || newName.trim() === '') return;
+            
+            const trimmedName = newName.trim();
+            
+            if (trimmedName.length > 50) {
+                showNotification('Name zu lang (max. 50 Zeichen)!', true);
+                return;
+            }
+
+            // Duplikat-Prüfung
+            const exists = appState.categories.some(cat => 
+                cat.name.toLowerCase() === trimmedName.toLowerCase() && cat.id !== catId
+            );
+
+            if (exists) {
+                showNotification('Diese Kategorie existiert bereits!', true);
+                return;
+            }
+
+            category.name = trimmedName;
+            saveData();
+            
+            renderCategories();
+            renderCategoryManagementList();
+            renderPrompts(); // Falls sich der Name ändert
+            
+            showNotification('Kategorie aktualisiert!');
+        }
+
+        /**
+         * Löscht eine Kategorie (nur wenn leer)
+         */
+        function deleteCategory(catId) {
+            const promptCount = appState.prompts.filter(p => p.category === catId).length;
+            
+            if (promptCount > 0) {
+                showNotification(`Kategorie kann nicht gelöscht werden (enthält ${promptCount} Prompt${promptCount !== 1 ? 's' : ''})!`, true);
+                return;
+            }
+
+            if (!confirm('Möchtest du diese Kategorie wirklich löschen?')) return;
+
+            appState.categories = appState.categories.filter(c => c.id !== catId);
+            
+            // Aktuelle Kategorie anpassen falls nötig
+            if (appState.currentCategory === catId) {
+                appState.currentCategory = 'all';
+            }
+
+            saveData();
+            renderCategories();
+            renderCategoryManagementList();
+            renderPrompts();
+            
+            showNotification('Kategorie gelöscht');
+        }
+
+        // ============================================================================
+        // PROMPT-VERWALTUNG
+        // ============================================================================
+
+        /**
+         * Zeigt das Modal für neuen/bearbeiteten Prompt
+         */
+        function showAddModal() {
+            appState.editingPromptId = null;
+            const modal = document.getElementById('addModal');
+            const title = document.getElementById('addModalTitle');
+            const form = document.getElementById('promptForm');
+
+            title.textContent = 'Neuen Prompt erstellen';
+            form.reset();
+
+            updateMarkdownPreview();
+
+            // Standard-Kategorie setzen
+            if (appState.currentCategory !== 'all' && appState.categories.some(c => c.id === appState.currentCategory)) {
+                document.getElementById('promptCategory').value = appState.currentCategory;
+            }
+
+            openModal('addModal');
+        }
+
+        /**
+         * Zeigt Modal für HF Chat Import
+         */
+        function showImportHFModal() {
+            const modal = document.getElementById('importHFModal');
+            const textarea = document.getElementById('hfChatContent');
+            
+            textarea.value = '';
+            updateMarkdownPreview('chat');
+            openModal('importHFModal');
+        }
+
+        /**
+         * Importiert HF Chat-Verlauf
+         */
+        function importHFChat() {
+            const content = document.getElementById('hfChatContent')?.value.trim();
+            const category = document.getElementById('hfImportCategory')?.value;
+
+            if (!content) {
+                showNotification('Bitte füge einen Chatverlauf ein!', true);
+                return;
+            }
+
+            // Titel extrahieren (erste sinnvolle Zeile)
+            const lines = content.split('\n');
+            let title = 'Chat-Import';
+            
+            for (let line of lines) {
+                const trimmed = line.trim();
+                if (trimmed && trimmed.length > 5 && trimmed.length < 80) {
+                    title = trimmed;
+                    break;
+                }
+            }
+
+            // Längenbegrenzung
+            if (content.length > CONFIG.MAX_CONTENT_LENGTH) {
+                showNotification('Chat-Verlauf zu lang (max. 50.000 Zeichen)!', true);
+                return;
+            }
+
+            const now = new Date().toISOString();
+            const prompt = {
+                id: 'prompt_' + Date.now(),
+                title: title.substring(0, CONFIG.MAX_TITLE_LENGTH) + (title.length > CONFIG.MAX_TITLE_LENGTH ? '...' : ''),
+                category: category,
+                content: content,
+                tags: ['imported', 'chat'],
+                createdAt: now,
+                updatedAt: now
+            };
+
+            appState.prompts.push(prompt);
+            saveData();
+            
+            renderCategories();
+            renderPrompts();
+            closeModal('importHFModal');
+            
+            showNotification('Chatverlauf eingefügt!');
+        }
+
+        /**
+         * Zeigt Prompt-Details an
+         */
+        function viewPrompt(id) {
+            const prompt = appState.prompts.find(p => p.id === id);
+            if (!prompt) return;
+
+            appState.currentPromptId = id;
+            const category = appState.categories.find(c => c.id === prompt.category) || 
+                           { name: 'Unkategorisiert', icon: '📁' };
+
+            const modal = document.getElementById('viewModal');
+            const title = document.getElementById('viewModalTitle');
+            const content = document.getElementById('viewContent');
+
+            title.textContent = prompt.title;
+            content.innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <span style="display: inline-flex; align-items: center; gap: 5px; background: #e0e7ff; color: #4f46e5; padding: 4px 12px; border-radius: 20px; font-size: 13px;">
+                        ${escapeHtml(category.icon)} ${escapeHtml(category.name)}
+                    </span>
+                </div>
+                <div class="markdown-preview markdown-body" style="border-left: 4px solid #4f46e5; background: #f8fafc; padding: 20px; margin-bottom: 20px; max-height: 60vh;">
+                    ${renderMarkdown(prompt.content)}
+                </div>
+                <div style="margin-bottom: 15px;">
+                    ${prompt.tags.map(tag => `<span class="tag" style="font-size: 13px; padding: 4px 10px;">${escapeHtml(tag)}</span>`).join(' ')}
+                </div>
+                <div style="color: #94a3b8; font-size: 12px;">
+                    Erstellt: ${new Date(prompt.createdAt).toLocaleString('de-DE')} | 
+                    Zuletzt bearbeitet: ${new Date(prompt.updatedAt).toLocaleString('de-DE')}
+                </div>
+            `;
+
+            openModal('viewModal');
+        }
+
+        /**
+         * Bearbeitet aktuellen Prompt
+         */
+        function editCurrentPrompt() {
+            if (!appState.currentPromptId) return;
+
+            const prompt = appState.prompts.find(p => p.id === appState.currentPromptId);
+            if (!prompt) return;
+
+            appState.editingPromptId = appState.currentPromptId;
+            
+            const modal = document.getElementById('addModal');
+            const title = document.getElementById('addModalTitle');
+            
+            title.textContent = 'Prompt bearbeiten';
+            document.getElementById('promptTitle').value = prompt.title;
+            document.getElementById('promptCategory').value = prompt.category;
+            document.getElementById('promptContent').value = prompt.content;
+            document.getElementById('promptTags').value = prompt.tags.join(', ');
+
+            updateMarkdownPreview();
+
+            closeModal('viewModal');
+            openModal('addModal');
+        }
+
+        /**
+         * Löscht aktuellen Prompt
+         */
+        function deleteCurrentPrompt() {
+            if (!appState.currentPromptId) return;
+            
+            if (!confirm('Möchtest du diesen Prompt wirklich löschen?')) return;
+
+            appState.prompts = appState.prompts.filter(p => p.id !== appState.currentPromptId);
+            saveData();
+            
+            renderCategories();
+            renderPrompts();
+            closeModal('viewModal');
+            
+            appState.currentPromptId = null;
+            showNotification('Prompt gelöscht');
+        }
+
+        /**
+         * Kopiert Prompt-Inhalt in Zwischenablage
+         */
+        function copyPrompt() {
+            if (!appState.currentPromptId) return;
+
+            const prompt = appState.prompts.find(p => p.id === appState.currentPromptId);
+            if (!prompt) return;
+
+            navigator.clipboard.writeText(prompt.content)
+                .then(() => showNotification('In Zwischenablage kopiert!'))
+                .catch(() => showNotification('Fehler beim Kopieren', true));
+        }
+
+        // ============================================================================
+        // IMPORT/EXPORT - DATENSICHERHEIT
+        // ============================================================================
+
+        /**
+         * Exportiert alle Daten als JSON
+         */
+        function exportData() {
+            try {
+                const data = {
+                    version: '2.1',
+                    exportDate: new Date().toISOString(),
+                    categories: appState.categories,
+                    prompts: appState.prompts
+                };
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `prompt-manager-backup-${new Date().toISOString().split('T')[0]}.json`;
+                a.style.display = 'none';
+                
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                URL.revokeObjectURL(url);
+                showNotification('Daten exportiert!');
+                
+            } catch (error) {
+                console.error('❌ Export-Fehler:', error);
+                showNotification('Fehler beim Exportieren', true);
+            }
+        }
+
+        /**
+         * Normalisiert Text für die Dubletten-Erkennung
+         */
+        function promptFingerprint(title, content) {
+            const normalize = (text) => String(text || '')
+                .toLowerCase()
+                .replace(/\s+/g, ' ')
+                .trim();
+            return `${normalize(title)}\u0000${normalize(content)}`;
+        }
+
+        /**
+         * Führt importierte Kategorien und Prompts mit dem Bestand zusammen.
+         *
+         * GEÄNDERT: Der Import überschreibt nichts mehr. Bestehende Kategorien
+         * und Prompts bleiben unverändert, neue kommen hinzu. Doppelungen
+         * werden erkannt und übersprungen:
+         * - Kategorien: gleiche ID oder gleicher Name (Groß-/Kleinschreibung egal)
+         * - Prompts:    gleiche ID oder gleicher Titel + gleicher Inhalt
+         *
+         * Rückgabe: Statistik der durchgeführten Änderungen
+         */
+        function mergeImportedData(importedCategories, importedPrompts) {
+            const stats = {
+                categoriesAdded: 0,
+                categoriesMapped: 0,
+                promptsAdded: 0,
+                promptsSkipped: 0
+            };
+
+            // ---- Kategorien zusammenführen --------------------------------
+            const categoryById = new Map(appState.categories.map(cat => [cat.id, cat]));
+            const categoryByName = new Map(
+                appState.categories.map(cat => [String(cat.name || '').toLowerCase(), cat])
+            );
+
+            // Ordnet importierten Kategorie-IDs die bestehende Ziel-Kategorie zu
+            const categoryTarget = new Map();
+
+            importedCategories.forEach(importedCategory => {
+                if (!importedCategory || !importedCategory.id || !importedCategory.name) return;
+
+                // Bereinigte Struktur sicherstellen
+                const wanted = {
+                    id: String(importedCategory.id),
+                    name: String(importedCategory.name),
+                    icon: importedCategory.icon || '📁'
+                };
+
+                // Fall 1: Kategorie mit gleicher ID existiert -> unverändert lassen
+                const existingById = categoryById.get(wanted.id);
+                if (existingById) {
+                    categoryTarget.set(wanted.id, existingById);
+                    return;
+                }
+
+                // Fall 2: Kategorie mit gleichem Namen existiert -> bestehende
+                // Kategorie behalten, importierte Prompts später darauf ummappen
+                const existingByName = categoryByName.get(wanted.name.toLowerCase());
+                if (existingByName) {
+                    categoryTarget.set(wanted.id, existingByName);
+                    stats.categoriesMapped++;
+                    return;
+                }
+
+                // Fall 3: Neue Kategorie -> hinzufügen
+                appState.categories.push(wanted);
+                categoryById.set(wanted.id, wanted);
+                categoryByName.set(wanted.name.toLowerCase(), wanted);
+                categoryTarget.set(wanted.id, wanted);
+                stats.categoriesAdded++;
+            });
+
+            // ---- Prompts zusammenführen -----------------------------------
+            const existingIds = new Set(appState.prompts.map(p => p.id));
+            const existingFingerprints = new Set(
+                appState.prompts.map(p => promptFingerprint(p.title, p.content))
+            );
+
+            importedPrompts.forEach(importedPrompt => {
+                if (!importedPrompt || !importedPrompt.id || !importedPrompt.title) return;
+
+                const promptData = {
+                    id: String(importedPrompt.id),
+                    title: String(importedPrompt.title).substring(0, CONFIG.MAX_TITLE_LENGTH),
+                    category: importedPrompt.category,
+                    content: String(importedPrompt.content || ''),
+                    tags: Array.isArray(importedPrompt.tags) ? importedPrompt.tags.map(String) : [],
+                    createdAt: importedPrompt.createdAt || new Date().toISOString(),
+                    updatedAt: importedPrompt.updatedAt || importedPrompt.createdAt || new Date().toISOString()
+                };
+
+                // Kategorie-Mapping anwenden (z. B. bei Namens-Gleichheit)
+                promptData.category = categoryTarget.get(promptData.category)?.id || promptData.category;
+
+                // Doppelung: gleiche ID oder identischer Titel + Inhalt
+                if (existingIds.has(promptData.id) ||
+                    existingFingerprints.has(promptFingerprint(promptData.title, promptData.content))) {
+                    stats.promptsSkipped++;
+                    return;
+                }
+
+                appState.prompts.push(promptData);
+                existingIds.add(promptData.id);
+                existingFingerprints.add(promptFingerprint(promptData.title, promptData.content));
+                stats.promptsAdded++;
+            });
+
+            return stats;
+        }
+
+        /**
+         * Importiert Daten aus JSON-Datei.
+         * GEÄNDERT: Der Bestand bleibt erhalten; neue Kategorien und Prompts
+         * werden ergänzt, Doppelungen werden automatisch übersprungen.
+         */
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.style.display = 'none';
+
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                
+                reader.onload = function(event) {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        
+                        // Validierung der Dateistruktur
+                        if (!data.categories || !Array.isArray(data.categories) || 
+                            !data.prompts || !Array.isArray(data.prompts)) {
+                            throw new Error('Ungültige Dateistruktur');
+                        }
+
+                        const confirmMsg = `Möchtest du ${data.prompts.length} Prompts und ${data.categories.length} Kategorien importieren? Deine bestehenden Daten bleiben dabei erhalten – bereits vorhandene Einträge werden nicht doppelt angelegt.`;
+                        
+                        if (confirm(confirmMsg)) {
+                            appState.currentCategory = 'all';
+
+                            // Zusammenführen statt Überschreiben
+                            const stats = mergeImportedData(data.categories, data.prompts);
+
+                            validateData();
+                            saveData();
+                            
+                            renderCategories();
+                            renderPrompts();
+                            
+                            showNotification(`Import: ${stats.categoriesAdded} neue Kategorien, ${stats.promptsAdded} neue Prompts, ${stats.promptsSkipped} Doppelungen übersprungen`);
+                        }
+                        
+                    } catch (err) {
+                        console.error('❌ Import-Fehler:', err);
+                        showNotification('Fehler: ' + err.message, true);
+                    }
+                };
+                
+                reader.readAsText(file);
+            };
+            
+            document.body.appendChild(input);
+            input.click();
+            document.body.removeChild(input);
+        }
+
+        // ============================================================================
+        // MARKDOWN-RENDERING UND LIVE-VORSCHAU
+        // ============================================================================
+
+        /**
+         * Markdown wird ausschließlich lokal gerendert — es werden keine
+         * externen Skripte aus dem Internet nachgeladen. Der eingebaute
+         * Renderer deckt die für Prompts und Chatverläufe relevanten
+         * Auszeichnungen ab (Überschriften, Listen inkl. Verschachtelung,
+         * Task-Listen, Tabellen, Code, Zitate, Fett/Kursiv, Bilder, Links)
+         * und erzeugt ausschließlich escapte, XSS-sichere Ausgabe.
+         */
+
+        /**
+         * Lokaler Markdown-Renderer (keine externen Requests, offline-fähig).
+         * Erzeugt ausschließlich escapte HTML-Ausgabe (XSS-sicher).
+         * Unterstützt: Überschriften, Listen (auch verschachtelt), Task-Listen,
+         * GFM-Tabellen (mit Ausrichtung), Blockquotes, Code-Blöcke,
+         * Inline-Code, Fett/Kursiv/Durchgestrichen, Bilder, Links, Trennlinien.
+         */
+        function renderMarkdown(text) {
+            const lines = String(text ?? '').split(/\r?\n/);
+            let html = '';
+            let inCode = false;
+            let codeBuffer = [];
+            const listStack = []; // { type: 'ul'|'ol', indent: number, liOpen: boolean }
+
+            const closeOneList = () => {
+                const list = listStack.pop();
+                if (list.liOpen) {
+                    html += '</li>';
+                }
+                html += `</${list.type}>`;
+            };
+
+            const closeAllLists = () => {
+                while (listStack.length > 0) {
+                    closeOneList();
+                }
+            };
+
+            const openLi = (content, cssClass) => {
+                // <li> bleibt bewusst offen, damit verschachtelte Listen
+                // innerhalb des Elements landen (valides HTML)
+                html += `<li${cssClass ? ` class="${cssClass}"` : ''}>${content}`;
+                listStack[listStack.length - 1].liOpen = true;
+            };
+
+            const renderListItem = (type, indent, content) => {
+                if (listStack.length === 0) {
+                    html += `<${type}>`;
+                    listStack.push({ type, indent, liOpen: false });
+                } else if (indent > listStack[listStack.length - 1].indent) {
+                    // Tiefere Einrückung: verschachtelte Liste im offenen <li>
+                    html += `<${type}>`;
+                    listStack.push({ type, indent, liOpen: false });
+                } else {
+                    while (listStack.length > 0 && listStack[listStack.length - 1].indent > indent) {
+                        closeOneList();
+                    }
+                    if (listStack.length === 0) {
+                        html += `<${type}>`;
+                        listStack.push({ type, indent, liOpen: false });
+                    } else {
+                        const top = listStack[listStack.length - 1];
+                        if (top.liOpen) {
+                            html += '</li>';
+                            top.liOpen = false;
+                        }
+                        if (top.type !== type) {
+                            html += `</${top.type}>`;
+                            listStack.pop();
+                            html += `<${type}>`;
+                            listStack.push({ type, indent, liOpen: false });
+                        }
+                    }
+                }
+
+                // Task-Listen: "- [ ] offen" / "- [x] erledigt"
+                const taskMatch = content.match(/^\[([ xX])\]\s+(.*)$/);
+                if (taskMatch) {
+                    const checked = taskMatch[1].toLowerCase() === 'x';
+                    openLi(`<input type="checkbox" disabled${checked ? ' checked' : ''}> ${renderInline(taskMatch[2])}`, 'task');
+                    return;
+                }
+                openLi(renderInline(content));
+            };
+
+            const isTableSeparator = (line) =>
+                /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/.test(line);
+
+            const splitTableRow = (line) => {
+                let cells = line.trim();
+                if (cells.startsWith('|')) {
+                    cells = cells.slice(1);
+                }
+                if (cells.endsWith('|')) {
+                    cells = cells.slice(0, -1);
+                }
+                return cells.split('|').map(c => c.trim());
+            };
+
+            const renderInline = (s) => {
+                let out = escapeHtml(s);
+                out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+                out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+                out = out.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
+                out = out.replace(/(?<![\w*])_([^_\n]+)_(?![\w*])/g, '<em>$1</em>');
+                out = out.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+                out = out.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (m, alt, url) =>
+                    `<img src="${url.replace(/"/g, '%22')}" alt="${alt}" style="max-width: 100%;">`
+                );
+                out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, label, url) =>
+                    `<a href="${url.replace(/"/g, '%22')}" target="_blank" rel="noopener">${label}</a>`
+                );
+                out = out.replace(/(^|[\s(])(https?:\/\/[^\s<]+[^\s<.,;:!?)])/g, (m, pre, url) =>
+                    `${pre}<a href="${url}" target="_blank" rel="noopener">${url}</a>`
+                );
+                return out;
+            };
+
+            for (let i = 0; i < lines.length; i++) {
+                const rawLine = lines[i];
+
+                // Code-Blöcke (``` ... ```) vollständig escapen
+                if (inCode) {
+                    if (/^\s*```/.test(rawLine)) {
+                        html += `<pre><code>${escapeHtml(codeBuffer.join('\n'))}</code></pre>`;
+                        codeBuffer = [];
+                        inCode = false;
+                    } else {
+                        codeBuffer.push(rawLine);
+                    }
+                    continue;
+                }
+
+                if (/^\s*```/.test(rawLine)) {
+                    closeAllLists();
+                    inCode = true;
+                    codeBuffer = [];
+                    continue;
+                }
+
+                const trimmed = rawLine.trim();
+
+                if (!trimmed) {
+                    closeAllLists();
+                    continue;
+                }
+
+                if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+                    closeAllLists();
+                    html += '<hr>';
+                    continue;
+                }
+
+                const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+                if (headingMatch) {
+                    closeAllLists();
+                    const level = headingMatch[1].length;
+                    html += `<h${level}>${renderInline(headingMatch[2])}</h${level}>`;
+                    continue;
+                }
+
+                // GFM-Tabellen: Kopfzeile mit "|", darunter Trennzeile "---|---"
+                if (trimmed.includes('|') && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
+                    closeAllLists();
+
+                    const headers = splitTableRow(trimmed);
+                    const aligns = splitTableRow(lines[i + 1]).map(sep => {
+                        if (/^:-+:$/.test(sep)) return 'center';
+                        if (/^:-+$/.test(sep)) return 'left';
+                        if (/^-+:$/.test(sep)) return 'right';
+                        return '';
+                    });
+                    const alignAttr = (idx) => (aligns[idx] ? ` style="text-align: ${aligns[idx]};"` : '');
+
+                    html += '<table><thead><tr>';
+                    headers.forEach((cell, idx) => {
+                        html += `<th${alignAttr(idx)}>${renderInline(cell)}</th>`;
+                    });
+                    html += '</tr></thead><tbody>';
+
+                    i += 2; // Kopf- und Trennzeile überspringen
+                    while (i < lines.length && lines[i].trim() && lines[i].includes('|')) {
+                        const cells = splitTableRow(lines[i]);
+                        html += '<tr>';
+                        headers.forEach((cell, idx) => {
+                            html += `<td${alignAttr(idx)}>${renderInline(cells[idx] ?? '')}</td>`;
+                        });
+                        html += '</tr>';
+                        i++;
+                    }
+                    html += '</tbody></table>';
+                    i--; // äußere Schleife erhöht i erneut
+                    continue;
+                }
+
+                // Listen mit Einrückungs-Verschachtelung
+                const bulletMatch = rawLine.match(/^(\s*)[-*+]\s+(.*)$/);
+                if (bulletMatch) {
+                    const indent = bulletMatch[1].replace(/\t/g, '    ').length;
+                    renderListItem('ul', indent, bulletMatch[2]);
+                    continue;
+                }
+
+                const orderedMatch = rawLine.match(/^(\s*)\d+[.)]\s+(.*)$/);
+                if (orderedMatch) {
+                    const indent = orderedMatch[1].replace(/\t/g, '    ').length;
+                    renderListItem('ol', indent, orderedMatch[2]);
+                    continue;
+                }
+
+                const quoteMatch = trimmed.match(/^>\s?(.*)$/);
+                if (quoteMatch) {
+                    closeAllLists();
+                    html += `<blockquote>${renderInline(quoteMatch[1])}</blockquote>`;
+                    continue;
+                }
+
+                closeAllLists();
+                html += `<p>${renderInline(trimmed)}</p>`;
+            }
+
+            // Offene Strukturen am Ende schließen
+            if (inCode) {
+                html += `<pre><code>${escapeHtml(codeBuffer.join('\n'))}</code></pre>`;
+            }
+            closeAllLists();
+
+            return html;
+        }
+
+        /**
+         * Vorschau-Ziele: Prompt-Formular und Chatverlauf-Einfügen-Modal
+         */
+        const markdownPreviews = {
+            prompt: { textareaId: 'promptContent', previewId: 'markdownPreview', toggleId: 'previewToggle', visible: true },
+            chat: { textareaId: 'hfChatContent', previewId: 'chatMarkdownPreview', toggleId: 'chatPreviewToggle', visible: true }
+        };
+
+        /**
+         * Aktualisiert die Markdown-Vorschau des angegebenen Ziels
+         * (Standard: Prompt-Formular)
+         */
+        function updateMarkdownPreview(which) {
+            const cfg = markdownPreviews[which || 'prompt'];
+            if (!cfg || !cfg.visible) return;
+
+            const preview = document.getElementById(cfg.previewId);
+            const textarea = document.getElementById(cfg.textareaId);
+            if (!preview || !textarea) return;
+
+            preview.innerHTML = renderMarkdown(textarea.value);
+        }
+
+        /**
+         * Blendet die Vorschau eines Ziels ein bzw. aus
+         */
+        function toggleMarkdownPreview(which) {
+            const cfg = markdownPreviews[which || 'prompt'];
+            if (!cfg) return;
+
+            cfg.visible = !cfg.visible;
+
+            const preview = document.getElementById(cfg.previewId);
+            const button = document.getElementById(cfg.toggleId);
+            if (!preview || !button) return;
+
+            preview.style.display = cfg.visible ? 'block' : 'none';
+            button.textContent = cfg.visible ? 'Vorschau ausblenden' : 'Vorschau anzeigen';
+            button.setAttribute('aria-pressed', String(cfg.visible));
+
+            if (cfg.visible) {
+                updateMarkdownPreview(which);
+            }
+        }
+
+        // ============================================================================
+        // MODAL-FUNKTIONEN - BARRIREFREI UND SICHER
+        // ============================================================================
+
+        /**
+         * Öffnet ein Modal mit Barrierefreiheit
+         */
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+
+            modal.style.display = 'block';
+            modal.setAttribute('aria-hidden', 'false');
+            
+            // Fokus auf erstes interaktives Element setzen
+            const firstInput = modal.querySelector('input, select, textarea, button');
+            if (firstInput) {
+                setTimeout(() => firstInput.focus(), 100);
+            }
+        }
+
+        /**
+         * Schließt ein Modal
+         */
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+            
+            // Fokus zurücksetzen
+            const trigger = document.activeElement;
+            if (trigger) {
+                trigger.blur();
+            }
+        }
+
+        /**
+         * Hilfe-Modal anzeigen
+         */
+        function showHelp() {
+            openModal('helpModal');
+        }
+
+        // ============================================================================
+        // UTILITIES - HELFERFUNKTIONEN
+        // ============================================================================
+
+        /**
+         * Escaped HTML für sichere Ausgabe
+         */
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        /**
+         * Zeigt Benachrichtigungen an
+         */
+        function showNotification(message, isError = false) {
+            const notification = document.getElementById('notification');
+            if (!notification) return;
+
+            notification.textContent = message;
+            notification.className = isError ? 'notification error show' : 'notification show';
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        /**
+         * Wählt eine Kategorie aus und aktualisiert die Ansicht
+         */
+        function selectCategory(catId) {
+            appState.currentCategory = catId;
+            renderCategories();
+            renderPrompts();
+        }
+
+        // ============================================================================
+        // EVENT-HANDLER - ZENTRALISIERTE EVENT-VERWALTUNG
+        // ============================================================================
+
+        /**
+         * Initialisiert alle Event-Listener
+         * OPTIMIERUNG: Event-Delegation statt vieler einzelner Listener
+         */
+        function initializeEventHandlers() {
+            // Suchfunktion mit Debouncing für Performance
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', debounce(renderPrompts, CONFIG.DEBOUNCE_DELAY));
+            }
+
+            // Markdown-Vorschau: Live-Aktualisierung beim Tippen (Debouncing)
+            const promptContentInput = document.getElementById('promptContent');
+            if (promptContentInput) {
+                promptContentInput.addEventListener('input', debounce(() => updateMarkdownPreview('prompt'), 150));
+            }
+
+            const hfChatContentInput = document.getElementById('hfChatContent');
+            if (hfChatContentInput) {
+                hfChatContentInput.addEventListener('input', debounce(() => updateMarkdownPreview('chat'), 150));
+            }
+
+            // Vorschau ein-/ausblenden
+            const previewToggleBtn = document.getElementById('previewToggle');
+            if (previewToggleBtn) {
+                previewToggleBtn.addEventListener('click', () => toggleMarkdownPreview('prompt'));
+            }
+
+            const chatPreviewToggleBtn = document.getElementById('chatPreviewToggle');
+            if (chatPreviewToggleBtn) {
+                chatPreviewToggleBtn.addEventListener('click', () => toggleMarkdownPreview('chat'));
+            }
+
+            // Prompt-Formular
+            const promptForm = document.getElementById('promptForm');
+            if (promptForm) {
+                promptForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    // Formulardaten sammeln und validieren
+                    const title = document.getElementById('promptTitle')?.value.trim();
+                    const category = document.getElementById('promptCategory')?.value;
+                    const content = document.getElementById('promptContent')?.value.trim();
+                    const tags = document.getElementById('promptTags')?.value.split(',').map(t => t.trim()).filter(t => t) || [];
+
+                    // Validierung
+                    if (!title || !content) {
+                        showNotification('Titel und Inhalt sind Pflichtfelder!', true);
+                        return;
+                    }
+
+                    if (title.length > CONFIG.MAX_TITLE_LENGTH) {
+                        showNotification(`Titel zu lang (max. ${CONFIG.MAX_TITLE_LENGTH} Zeichen)!`, true);
+                        return;
+                    }
+
+                    if (content.length > CONFIG.MAX_CONTENT_LENGTH) {
+                        showNotification(`Inhalt zu lang (max. ${CONFIG.MAX_CONTENT_LENGTH} Zeichen)!`, true);
+                        return;
+                    }
+
+                    const now = new Date().toISOString();
+                    
+                    if (appState.editingPromptId) {
+                        // Bearbeiten
+                        const index = appState.prompts.findIndex(p => p.id === appState.editingPromptId);
+                        if (index !== -1) {
+                            appState.prompts[index] = {
+                                ...appState.prompts[index],
+                                title, category, content, tags,
+                                updatedAt: now
+                            };
+                            showNotification('Prompt aktualisiert!');
+                        }
+                    } else {
+                        // Neu erstellen
+                        const prompt = {
+                            id: 'prompt_' + Date.now(),
+                            title, category, content, tags,
+                            createdAt: now,
+                            updatedAt: now
+                        };
+                        appState.prompts.push(prompt);
+                        showNotification('Prompt gespeichert!');
+                    }
+
+                    saveData();
+                    renderCategories();
+                    renderPrompts();
+                    closeModal('addModal');
+                });
+            }
+
+            // Modal schließen bei Klick außerhalb
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('modal')) {
+                    closeModal(e.target.id);
+                }
+            });
+
+            // ESC-Taste zum Schließen von Modals
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const openModal = document.querySelector('.modal[style*="block"]');
+                    if (openModal) {
+                        closeModal(openModal.id);
+                    }
+                }
+            });
+        }
+
+        // ============================================================================
+        // INITIALISIERUNG - GESAMTE ANWENDUNG STARTEN
+        // ============================================================================
+
+        /**
+         * Hauptinitialisierungsfunktion
+         * Wird beim Laden der Seite aufgerufen
+         */
+        function initializeApp() {
+            console.log('🚀 Initialisiere Prompt Manager Pro...');
+            
+            try {
+                // 1. Daten laden
+                loadData();
+                
+                // 2. UI initialisieren
+                renderCategories();
+                renderPrompts();
+                
+                // 3. Event-Handler initialisieren
+                initializeEventHandlers();
+                
+                // 4. Status setzen
+                appState.isInitialized = true;
+                
+                console.log('✅ Anwendung erfolgreich initialisiert');
+                
+            } catch (error) {
+                console.error('❌ Fehler bei der Initialisierung:', error);
+                showNotification('Fehler beim Starten der Anwendung', true);
+                
+                // Notfall-Initialisierung
+                appState.categories = [...CONFIG.DEFAULT_CATEGORIES];
+                appState.prompts = [];
+                appState.currentCategory = 'all';
+                
+                renderCategories();
+                renderPrompts();
+            }
+        }
+
+        // ============================================================================
+        // GLOBALE EVENT-LISTENER FÜR SPEZIELLE FUNKTIONEN
+        // ============================================================================
+
+        // Beim Laden der Seite initialisieren
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+        // Vor dem Verlassen der Seite: Letzte Änderungen sichern
+        window.addEventListener('beforeunload', function(e) {
+            // Hier könnte man noch ungespeicherte Änderungen warnen
+            // Für diese Anwendung nicht nötig, da alles sofort gespeichert wird
+        });
+
+        // Bei Sichtbarkeitsänderung (Tab wechseln): Performance anpassen
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Tab ist im Hintergrund: Reduziere Aktivität
+                console.log('📋 Tab im Hintergrund - Performance reduziert');
+            } else {
+                // Tab ist aktiv: Normale Aktualisierung
+                console.log('📋 Tab aktiv - Normale Performance');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+# =================== Personal data protection ===================
+# JSON exports of the prompt manager contain the user's prompts and
+# categories. They must never be committed or published.
+prompt-manager-backup-*.json
+
+# =================== OS / editor junk ===================
+Thumbs.db
+Desktop.ini
