@@ -7,6 +7,14 @@ Es verlassen keine Daten das Gerät, und es ist keine Internetverbindung erforde
 
 KISS steht für „Keep it simple, stupid“.
 
+## Screenshots
+
+| Erster Start (leer, ohne Daten) | Prompt-Bibliothek mit Kategorien |
+| :---: | :---: |
+| ![Erster Start](docs/screenshots/pm-start.png) | ![Prompt-Bibliothek](docs/screenshots/pm-list.png) |
+| **Detailansicht** — Markdown live gerendert | **Chatverlauf einfügen** — mit Live-Vorschau |
+| ![Detailansicht](docs/screenshots/pm-detail.png) | ![Chatverlauf](docs/screenshots/pm-chat-modal.png) |
+
 ## Benutzung
 
 - **Start:** `prompt-manager.html` im Browser öffnen. Kein Server, keine Installation.

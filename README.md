@@ -7,6 +7,14 @@ No data leaves the device, and no internet connection is required (no CDN, no re
 
 KISS means "Keep it simple, stupid".
 
+## Screenshots
+
+| First start (clean, no data) | Prompt library with categories |
+| :---: | :---: |
+| ![First start](docs/screenshots/pm-start.png) | ![Prompt library](docs/screenshots/pm-list.png) |
+| **Detail view** — Markdown rendered live | **Chat history import** — with live preview |
+| ![Detail view](docs/screenshots/pm-detail.png) | ![Chat import](docs/screenshots/pm-chat-modal.png) |
+
 ## Usage
 
 - **To get started:** Open `prompt-manager.html` in your browser. No server, no installation.
