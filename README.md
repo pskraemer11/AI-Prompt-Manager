@@ -43,8 +43,9 @@ Two independent safety nets are built in:
 
 1. **JSON export** (📤) downloads a dated `prompt-manager-backup-*.json`.
 2. **File backup** (📁) keeps a JSON file outside the browser and updates it after
-   every change. Requires the File System Access API (Chrome, Edge, Chromium);
-   Firefox users keep using export/import.
+   every change. Requires the File System Access API (Chrome, Edge, Chromium;
+   in Brave it is currently behind a flag). Firefox and Safari users keep using
+   export/import.
 
 On startup with an empty LocalStorage, the app shows a restore banner and an
 import button in the empty state. Existing backups remain importable.

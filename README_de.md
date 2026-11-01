@@ -44,8 +44,9 @@ Zwei voneinander unabhängige Sicherungen sind eingebaut:
 
 1. **JSON-Export** (📤) lädt ein datiertes `prompt-manager-backup-*.json` herunter.
 2. **Datei-Backup** (📁) hält eine JSON-Datei außerhalb des Browsers aktuell.
-   Voraussetzung ist die File System Access API (Chrome, Edge, Chromium);
-   in Firefox bleibt Export/Import der Weg.
+   Voraussetzung ist die File System Access API (Chrome, Edge, Chromium;
+   in Brave derzeit hinter einem Flag). In Firefox und Safari bleibt
+   Export/Import der Weg.
 
 Beim Start mit leerem LocalStorage zeigt die App einen Wiederherstellungs-Hinweis
 und im leeren Zustand einen Import-Button. Bestehende Backups bleiben importierbar.
