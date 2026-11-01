@@ -3,7 +3,8 @@
 Local AI prompt management with categories, tags, import/export, and Markdown display.
 
 Runs entirely in the browser - everything stays on the device (LocalStorage).
-No data leaves the device, and no internet connection is required (no CDN, no requests).
+No data leaves the device, and no internet connection is required (no CDN, no external requests).
+The optional local server (see below) only talks to 127.0.0.1.
 
 KISS means "Keep it simple, stupid".
 
@@ -32,8 +33,13 @@ KISS means "Keep it simple, stupid".
   that delete cookies and site data on close. The app restores from that file on demand.
   In Firefox and Safari the same button downloads a dated JSON backup instead
   (no error); restore it with **Import** after a restart.
-- **Browser storage warning:** If no file backup is connected, the app warns before
-  closing the tab while there are unsaved-to-file changes.
+- **Local server (Firefox, Chrome, Edge):** `npm start` (or `node serve.mjs`) serves the app at
+  `http://127.0.0.1:8765/` and writes every change to `prompt-manager-data.json` next to the HTML.
+  This is the automatic backup path for Firefox and Safari. Options: `--port`, `--data`, `--no-open`.
+  The server binds to loopback, uses a random same-origin token, and is optional; the standalone
+  HTML remains fully local.
+- **Browser storage warning:** If no file or server backup is active, the app warns before
+  closing the tab while there are unsaved changes.
 
 ## Data storage and backup
 
@@ -41,24 +47,29 @@ Data is stored in the browser's LocalStorage. **Browser settings that clear cook
 or site data on close also clear LocalStorage** - in that case the data is gone after
 closing the browser unless a backup exists.
 
-Two independent safety nets are built in:
+Three independent safety nets are built in:
 
 1. **JSON export** (📤) downloads a dated `prompt-manager-backup-*.json`.
 2. **File backup** (📁) keeps a JSON file outside the browser and updates it after
    every change. Requires the File System Access API (Chrome, Edge, Chromium;
    in Brave it is currently behind a flag). In Firefox and Safari the same button
    downloads a dated JSON backup instead; restore it with **Import**.
+3. **Local server** (`node serve.mjs`) keeps the data in `prompt-manager-data.json` on disk
+   and updates it after every change. This works in Firefox and Safari, where the File System
+   Access API is unavailable. The server only listens on 127.0.0.1 and requires a per-session token.
 
 On startup with an empty LocalStorage, the app shows a restore banner and an
 import button in the empty state. Existing backups remain importable.
 
-`prompt-manager-backup-*.json` is gitignored because it may contain personal content.
+`prompt-manager-backup-*.json`, `prompt-manager-data.json` and its `.bak` are gitignored
+because they may contain personal content.
 
 ## Security and privacy
 
 - **Offline guarantee:** The page loads no external scripts, styles, fonts, or images.
-  A Content-Security-Policy blocks network connections (`connect-src 'none'`,
-  `img-src data:`, `default-src 'none'`).
+  The CSP restricts connections to the same origin (`connect-src 'self'`); the optional
+  local server uses only 127.0.0.1, and the standalone file makes no requests at all.
+  `img-src data:` and `default-src 'none'` remain in force.
 - **External images in Markdown are not loaded.** They are rendered as a link marked
   "(external, not loaded)"; only embedded `data:image/...` raster images are displayed.
 - **HTML is escaped** in prompts, categories, tags, and Markdown. Attribute values
@@ -85,6 +96,7 @@ Requirements: Node.js 20 or newer. There are no npm dependencies.
 npm test          # behavior tests (node:test + node:vm, no browser needed)
 npm run check     # static checks: syntax, CSP, offline limits, IDs, handlers
 npm run verify    # both
+npm start         # optional local server, http://127.0.0.1:8765/
 bash scripts/hooks-testrun.sh   # five pre-push hook probes (Git Bash)
 ```
 
@@ -104,7 +116,9 @@ the privacy/secret hook for every push and pull request.
 The application exposes a small test surface as `window.PromptManager`
 (Markdown renderer, URL sanitizer, import validation, merge and move logic).
 Tests load the real inline script from `prompt-manager.html`; there is no copy
-of the implementation in the test suite.
+of the implementation in the test suite. `tests/server.test.mjs` starts the
+local server on an ephemeral port and checks token auth, persistence, backups,
+and path handling.
 
 ## License
 

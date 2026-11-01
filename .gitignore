@@ -2,6 +2,9 @@
 # JSON exports of the prompt manager contain the user's prompts and
 # categories. They must never be committed or published.
 prompt-manager-backup-*.json
+prompt-manager-data.json
+prompt-manager-data.json.bak
+prompt-manager-data.json.tmp-*
 
 # =================== OS / editor junk ===================
 Thumbs.db

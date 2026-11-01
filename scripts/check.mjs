@@ -4,6 +4,7 @@
 
 import { readFile, access } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 import vm from 'node:vm';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -41,6 +42,14 @@ if (scriptMatches.length === 1) {
     }
 }
 
+// --- Syntax des optionalen Servers ------------------------------------------
+try {
+    execFileSync(process.execPath, ['--check', `${ROOT}serve.mjs`], { stdio: 'pipe' });
+    notes.push('serve.mjs syntaktisch gültig');
+} catch (error) {
+    fail(`serve.mjs ist kein gültiges JavaScript: ${error.message}`);
+}
+
 // --- Content-Security-Policy ------------------------------------------------
 const cspMatch = html.match(/<meta http-equiv="Content-Security-Policy"\s+content="([^"]+)">/);
 if (!cspMatch) {
@@ -52,7 +61,7 @@ if (!cspMatch) {
         "script-src 'unsafe-inline'",
         "style-src 'unsafe-inline'",
         'img-src data:',
-        "connect-src 'none'",
+        "connect-src 'self'",
         "form-action 'none'",
         "base-uri 'none'",
         "object-src 'none'"
@@ -66,7 +75,7 @@ const externalTag = /<(?:script|img|link|iframe|source|audio|video|object|embed)
 check(!externalTag.test(html), 'Markup lädt eine externe Ressource');
 
 for (const [pattern, label] of [
-    [/\bfetch\s*\(/, 'fetch()'],
+    [/\bfetch\(\s*(?!serverBackup\.endpoint)/, 'fetch() außerhalb des Server-Endpunkts'],
     [/XMLHttpRequest/, 'XMLHttpRequest'],
     [/sendBeacon/, 'sendBeacon'],
     [/new\s+WebSocket/, 'WebSocket'],

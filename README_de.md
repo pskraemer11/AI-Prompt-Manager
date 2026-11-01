@@ -3,7 +3,8 @@
 Lokale Verwaltung von KI-Prompts mit Kategorien, Tags, Import-/Exportfunktionen und Markdown-Anzeige.
 
 Läuft vollständig im Browser – alle Daten bleiben auf dem Gerät (LocalStorage).
-Es verlassen keine Daten das Gerät, und es ist keine Internetverbindung erforderlich (kein CDN, keine Anfragen).
+Es verlassen keine Daten das Gerät, und es ist keine Internetverbindung erforderlich (kein CDN, keine externen Anfragen).
+Der optionale lokale Server (siehe unten) spricht ausschließlich mit 127.0.0.1.
 
 KISS steht für „Keep it simple, stupid“.
 
@@ -17,7 +18,8 @@ KISS steht für „Keep it simple, stupid“.
 
 ## Benutzung
 
-- **Start:** `prompt-manager.html` im Browser öffnen. Kein Server, keine Installation.
+- **Start:** `prompt-manager.html` im Browser öffnen. Ohne Server, ohne Installation.
+  Optional: `npm start` (oder `node serve.mjs`) startet einen lokalen Server für Autosave.
 - **Export / Import:** Daten als JSON sichern (📤 Export) und wiederherstellen (📥 Import).
   Der Import **mischt statt überschreibt**: bestehende Kategorien und Prompts bleiben erhalten,
   neue kommen dazu; Doppelungen (gleiche ID oder identischer Titel + Inhalt) werden übersprungen.
@@ -33,8 +35,13 @@ KISS steht für „Keep it simple, stupid“.
   Die App stellt die Daten auf Wunsch aus dieser Datei wieder her.
   In Firefox und Safari lädt derselbe Button stattdessen ein datiertes JSON-Backup
   herunter (keine Fehlermeldung); nach einem Neustart über **Import** wiederherstellen.
-- **Browser-Speicher-Warnung:** Ohne verbundene Datei warnt die App beim Schließen,
-  wenn Änderungen noch nicht in eine Datei gesichert wurden.
+- **Lokaler Server (Firefox, Chrome, Edge):** `npm start` (oder `node serve.mjs`) liefert die App
+  unter `http://127.0.0.1:8765/` aus und schreibt jede Änderung in `prompt-manager-data.json`
+  neben der HTML-Datei. Das ist der automatische Backup-Pfad für Firefox und Safari.
+  Optionen: `--port`, `--data`, `--no-open`. Der Server bindet nur an Loopback, nutzt ein
+  zufälliges Same-Origin-Token und ist optional; die Einzeldatei bleibt vollständig lokal.
+- **Browser-Speicher-Warnung:** Ohne aktives Datei- oder Server-Backup warnt die App beim
+  Schließen, wenn Änderungen noch nicht gesichert wurden.
 
 ## Datenspeicherung und Backup
 
@@ -42,7 +49,7 @@ Die Daten liegen im LocalStorage des Browsers. **Browsereinstellungen, die beim 
 Cookies oder Website-Daten löschen, löschen auch den LocalStorage** – ohne Backup sind die
 Daten danach weg.
 
-Zwei voneinander unabhängige Sicherungen sind eingebaut:
+Drei voneinander unabhängige Sicherungen sind eingebaut:
 
 1. **JSON-Export** (📤) lädt ein datiertes `prompt-manager-backup-*.json` herunter.
 2. **Datei-Backup** (📁) hält eine JSON-Datei außerhalb des Browsers aktuell.
@@ -50,17 +57,23 @@ Zwei voneinander unabhängige Sicherungen sind eingebaut:
    in Brave derzeit hinter einem Flag). In Firefox und Safari lädt derselbe
    Button stattdessen ein datiertes JSON-Backup herunter; Wiederherstellung
    über **Import**.
+3. **Lokaler Server** (`node serve.mjs`) hält die Daten in `prompt-manager-data.json`
+   auf der Festplatte aktuell. Das funktioniert in Firefox und Safari, wo die
+   File System Access API fehlt. Der Server lauscht nur auf 127.0.0.1 und
+   verlangt ein Token pro Sitzung.
 
 Beim Start mit leerem LocalStorage zeigt die App einen Wiederherstellungs-Hinweis
 und im leeren Zustand einen Import-Button. Bestehende Backups bleiben importierbar.
 
-`prompt-manager-backup-*.json` ist gitignored, weil die Datei persönliche Inhalte enthalten kann.
+`prompt-manager-backup-*.json`, `prompt-manager-data.json` und die `.bak` sind gitignored,
+weil sie persönliche Inhalte enthalten können.
 
 ## Sicherheit und Datenschutz
 
 - **Offline-Zusage:** Die Seite lädt keine externen Skripte, Styles, Fonts oder Bilder.
-  Eine Content-Security-Policy blockiert Netzwerkverbindungen (`connect-src 'none'`,
-  `img-src data:`, `default-src 'none'`).
+  Die CSP erlaubt Verbindungen nur zur eigenen Origin (`connect-src 'self'`); der optionale
+  lokale Server nutzt ausschließlich 127.0.0.1, die Einzeldatei stellt gar keine Anfragen.
+  `img-src data:` und `default-src 'none'` bleiben in Kraft.
 - **Externe Bilder in Markdown werden nicht geladen.** Sie erscheinen als Link mit dem
   Hinweis „(extern, nicht geladen)“; nur eingebettete `data:image/...`-Rasterbilder werden angezeigt.
 - **HTML wird escaped** in Prompts, Kategorien, Tags und Markdown. Attributwerte escapen
@@ -87,6 +100,7 @@ Voraussetzung: Node.js 20 oder neuer. Es gibt keine npm-Abhängigkeiten.
 npm test          # Verhaltenstests (node:test + node:vm, ohne Browser)
 npm run check     # statische Prüfung: Syntax, CSP, Offline-Grenzen, IDs, Handler
 npm run verify    # beides
+npm start         # optionaler lokaler Server, http://127.0.0.1:8765/
 bash scripts/hooks-testrun.sh   # fünf Proben für den pre-push-Hook (Git-Bash)
 ```
 
@@ -106,7 +120,9 @@ Privacy-/Secret-Prüfung für jeden Push und Pull Request aus.
 Die Anwendung stellt eine kleine Testfläche als `window.PromptManager` bereit
 (Markdown-Renderer, URL-Sanitizer, Importprüfung, Merge- und Verschiebe-Logik).
 Die Tests laden das echte Inline-Skript aus `prompt-manager.html`; es gibt keine
-Kopie der Implementierung in der Testsuite.
+Kopie der Implementierung in der Testsuite. `tests/server.test.mjs` startet den
+lokalen Server auf einem freien Port und prüft Token-Auth, Persistenz, Sicherung
+und Pfadbehandlung.
 
 ## Lizenz
 

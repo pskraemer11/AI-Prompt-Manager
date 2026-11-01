@@ -13,7 +13,8 @@ test('CSP verbietet Netzwerkziele und erlaubt nur eingebettete Bilder', () => {
     assert.match(policy, /script-src 'unsafe-inline'/);
     assert.match(policy, /style-src 'unsafe-inline'/);
     assert.match(policy, /img-src data:/);
-    assert.match(policy, /connect-src 'none'/);
+    assert.match(policy, /connect-src 'self'/);
+    assert.doesNotMatch(policy, /connect-src \*/);
     assert.match(policy, /form-action 'none'/);
     assert.match(policy, /base-uri 'none'/);
     assert.match(policy, /object-src 'none'/);
@@ -25,8 +26,9 @@ test('keine externen Ressourcen im Markup', () => {
     assert.doesNotMatch(html, /<script[^>]+\bsrc=/i);
 });
 
-test('keine Netzwerk-APIs im Anwendungscode', () => {
-    assert.doesNotMatch(html, /\bfetch\s*\(/);
+test('keine Netzwerk-APIs außer dem lokalen Server-Endpunkt', () => {
+    // fetch() ist nur für den optionalen, same-origin Server erlaubt.
+    assert.doesNotMatch(html, /fetch\(\s*(?!serverBackup\.endpoint)/);
     assert.doesNotMatch(html, /XMLHttpRequest/);
     assert.doesNotMatch(html, /sendBeacon/);
     assert.doesNotMatch(html, /new\s+WebSocket/);
@@ -79,6 +81,11 @@ test('Backup-Datei und Browser-Speicher-Status sind verdrahtet', () => {
     assert.match(html, /showSaveFilePicker/);
     assert.match(html, /beforeunload/);
     assert.equal(api.isFileBackupSupported(), false);
+});
+
+test('Datei-App bleibt ohne Server-Meta im lokalen Modus', () => {
+    assert.equal(api.isServerMode(), false);
+    assert.equal(api.getServerStatus().status, 'none');
 });
 
 test('Detailansicht bietet das Verschieben in eine andere Kategorie', () => {

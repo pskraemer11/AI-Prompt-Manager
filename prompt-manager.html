@@ -10,7 +10,13 @@
         und das Inline-Skript dieser Einzeldatei bleiben erlaubt.
     -->
     <meta http-equiv="Content-Security-Policy"
-          content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'">
+          content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'">
+    <!--
+        Optionaler lokaler Server (serve.mjs) ersetzt diesen Platzhalter durch
+        ein zufälliges Token. Ohne Server bleibt der Wert stehen und der
+        Server-Modus ist aus; die Datei funktioniert dann rein lokal.
+    -->
+    <meta name="prompt-manager-server" content="__PM_SERVER_TOKEN__">
     <!--
         Prompt Manager Pro — lokale Promptverwaltung (einzelne HTML-Datei)
         Copyright (C) 2026 pskraemer11
@@ -1055,7 +1061,8 @@
                 und wird bei jeder Änderung aktualisiert.</p>
                 <p><strong>Firefox und Safari</strong> können Dateien nicht direkt fortschreiben. Dort lädt
                 der Backup-Button stattdessen ein JSON-Backup herunter; nach dem Neustart über
-                <strong>Import</strong> wiederherstellen.</p>
+                <strong>Import</strong> wiederherstellen. Alternativ den optionalen lokalen Server starten:
+                <code>npm start</code> — dann schreibt die App automatisch in <code>prompt-manager-data.json</code>.</p>
                 <h4 style="margin-bottom: 10px; color: #1e293b;">🔒 Offline und Sicherheit</h4>
                 <p>Die Anwendung lädt nichts aus dem Internet. Externe Bilder in Markdown werden nicht
                 geladen, sondern als Link angezeigt. Links werden nur nach einem Klick geöffnet.</p>
@@ -1143,6 +1150,16 @@
             handle: null,
             status: 'none',
             lastWriteAt: null,
+            lastError: null,
+            timer: null
+        };
+
+        const serverBackup = {
+            tokenMeta: 'prompt-manager-server',
+            tokenPlaceholder: '__PM_SERVER_TOKEN__',
+            endpoint: '/api/state',
+            status: 'none',
+            lastSavedAt: null,
             lastError: null,
             timer: null
         };
@@ -1441,6 +1458,7 @@
 
         function saveData(options = {}) {
             const markDirty = options.markDirty !== false;
+            const skipServer = options.skipServer === true;
             try {
                 localStorage.setItem(CONFIG.STORAGE_KEYS.CATEGORIES, JSON.stringify(appState.categories));
                 localStorage.setItem(CONFIG.STORAGE_KEYS.PROMPTS, JSON.stringify(appState.prompts));
@@ -1449,6 +1467,7 @@
                     appState.dirtySinceExport = true;
                     appState.saveRevision += 1;
                 }
+                if (!skipServer) scheduleServerWrite();
                 scheduleDataFileWrite();
                 updateStorageStatus();
             } catch (error) {
@@ -1463,6 +1482,18 @@
 
         function isFileBackupSupported() {
             return typeof window.showSaveFilePicker === 'function';
+        }
+
+        function getServerToken() {
+            const meta = document.querySelector(`meta[name="${serverBackup.tokenMeta}"]`);
+            const token = meta ? meta.getAttribute('content') : '';
+            if (!token || token === serverBackup.tokenPlaceholder) return null;
+            return token;
+        }
+
+        function isServerMode() {
+            if (!getServerToken()) return false;
+            return window.location.protocol === 'http:' || window.location.protocol === 'https:';
         }
 
         function openBackupDatabase() {
@@ -1567,6 +1598,15 @@
         }
 
         function storageStatusText() {
+            if (serverBackup.status === 'active') {
+                const time = serverBackup.lastSavedAt
+                    ? new Date(serverBackup.lastSavedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+                    : '—';
+                return `Server-Backup aktiv · ${time}`;
+            }
+            if (serverBackup.status === 'loading') return 'Server-Backup wird geladen …';
+            if (serverBackup.status === 'error') return 'Server-Backup nicht erreichbar';
+
             if (fileBackup.status === 'active') {
                 const time = fileBackup.lastWriteAt
                     ? fileBackup.lastWriteAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
@@ -1581,23 +1621,37 @@
             return 'Nur Browser-Speicher · nicht dauerhaft';
         }
 
+        function effectiveBackupState() {
+            if (serverBackup.status === 'active') return 'active';
+            if (serverBackup.status === 'error') return 'error';
+            return fileBackup.status;
+        }
+
         function updateStorageStatus() {
             const status = document.getElementById('storageStatus');
             if (status) {
                 status.textContent = storageStatusText();
-                status.dataset.state = fileBackup.status;
+                status.dataset.state = effectiveBackupState();
                 status.title = 'Browser-Speicher kann beim Löschen der Website-Daten verschwinden. '
-                    + 'Ein Datei-Backup bleibt erhalten.';
+                    + 'Ein Datei- oder Server-Backup bleibt erhalten.';
             }
 
             const banner = document.getElementById('storageBanner');
             if (banner) {
-                banner.hidden = appState.bannerDismissed || fileBackup.status === 'active';
+                banner.hidden = appState.bannerDismissed
+                    || serverBackup.status === 'active'
+                    || fileBackup.status === 'active';
             }
 
             const button = document.getElementById('connectFileBtn');
             if (button) {
-                if (!isFileBackupSupported()) {
+                if (serverBackup.status === 'active') {
+                    button.textContent = '💾 Server-Backup jetzt schreiben';
+                } else if (serverBackup.status === 'loading') {
+                    button.textContent = '⏳ Server-Backup wird geladen';
+                } else if (serverBackup.status === 'error') {
+                    button.textContent = '🔄 Server-Backup erneut';
+                } else if (!isFileBackupSupported()) {
                     button.textContent = '📥 Backup exportieren';
                 } else if (fileBackup.status === 'active') {
                     button.textContent = '💾 Backup jetzt schreiben';
@@ -1610,9 +1664,13 @@
 
             const bannerButton = document.getElementById('bannerBackupBtn');
             if (bannerButton) {
-                bannerButton.textContent = isFileBackupSupported()
-                    ? 'Backup-Datei verbinden'
-                    : 'Backup exportieren';
+                if (isServerMode()) {
+                    bannerButton.textContent = 'Server-Backup jetzt schreiben';
+                } else {
+                    bannerButton.textContent = isFileBackupSupported()
+                        ? 'Backup-Datei verbinden'
+                        : 'Backup exportieren';
+                }
             }
         }
 
@@ -1808,6 +1866,12 @@
         }
 
         function handleBackupButton() {
+            if (isServerMode()) {
+                void writeServerState().then((ok) => {
+                    if (ok) showNotification('Server-Backup aktualisiert.');
+                });
+                return;
+            }
             if (!isFileBackupSupported()) {
                 // Firefox/Safari: Es gibt keine API zum direkten Fortschreiben.
                 // Statt einer Sackgasse wird das JSON-Backup heruntergeladen.
@@ -1832,6 +1896,10 @@
         }
 
         async function restoreFileHandle() {
+            if (isServerMode()) {
+                updateStorageStatus();
+                return;
+            }
             if (!isFileBackupSupported()) {
                 updateStorageStatus();
                 return;
@@ -1842,6 +1910,116 @@
                 fileBackup.status = 'available';
             }
             updateStorageStatus();
+        }
+
+        // ============================================================================
+        // OPTIONALER LOKALER SERVER (serve.mjs)
+        // ============================================================================
+
+        async function loadServerState() {
+            if (!isServerMode()) return false;
+
+            serverBackup.status = 'loading';
+            updateStorageStatus();
+
+            try {
+                const response = await fetch(serverBackup.endpoint, {
+                    method: 'GET',
+                    headers: { 'X-PM-Token': getServerToken() },
+                    cache: 'no-store'
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                if (data.empty) {
+                    serverBackup.status = 'active';
+                    serverBackup.lastSavedAt = null;
+                    updateStorageStatus();
+                    if (appState.prompts.length > 0 || appState.categories.length > 0) {
+                        scheduleServerWrite();
+                    }
+                    return true;
+                }
+
+                const decoded = validateImportedData({
+                    version: data.version || CONFIG.EXPORT_VERSION,
+                    categories: data.categories || [],
+                    prompts: data.prompts || []
+                });
+                if (!decoded.ok) throw new Error(decoded.errors[0] || 'ungültige Serverdaten');
+
+                mergeImportedData(decoded.categories, decoded.prompts);
+                validateData();
+                saveData({ markDirty: false, skipServer: true });
+
+                serverBackup.status = 'active';
+                serverBackup.lastSavedAt = data.savedAt || null;
+                serverBackup.lastError = null;
+                updateStorageStatus();
+                scheduleServerWrite();
+                return true;
+            } catch (error) {
+                console.error('Server-Backup konnte nicht geladen werden:', error);
+                serverBackup.status = 'error';
+                serverBackup.lastError = error;
+                updateStorageStatus();
+                showNotification('Server-Backup nicht erreichbar. Bitte JSON exportieren.', true);
+                return false;
+            }
+        }
+
+        function scheduleServerWrite() {
+            if (!isServerMode()) return;
+            if (serverBackup.status === 'none' || serverBackup.status === 'loading') return;
+
+            clearTimeout(serverBackup.timer);
+            serverBackup.timer = setTimeout(() => {
+                serverBackup.timer = null;
+                void writeServerState();
+            }, 500);
+        }
+
+        async function writeServerState() {
+            if (!isServerMode()) return false;
+            if (serverBackup.status === 'loading') return false;
+
+            const wasError = serverBackup.status === 'error';
+
+            try {
+                const revision = appState.saveRevision;
+                const response = await fetch(serverBackup.endpoint, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-PM-Token': getServerToken()
+                    },
+                    body: encodeBackup()
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const result = await response.json();
+                serverBackup.status = 'active';
+                serverBackup.lastSavedAt = result.savedAt || new Date().toISOString();
+                serverBackup.lastError = null;
+
+                if (revision === appState.saveRevision) {
+                    appState.dirtySinceExport = false;
+                } else {
+                    scheduleServerWrite();
+                }
+
+                updateStorageStatus();
+                return true;
+            } catch (error) {
+                console.error('Server-Backup fehlgeschlagen:', error);
+                serverBackup.status = 'error';
+                serverBackup.lastError = error;
+                updateStorageStatus();
+                if (!wasError) {
+                    showNotification('Server-Backup fehlgeschlagen. Bitte JSON exportieren.', true);
+                }
+                return false;
+            }
         }
 
         // ============================================================================
@@ -3266,16 +3444,21 @@
             });
         }
 
-        function initializeApp() {
+        async function initializeApp() {
             try {
                 loadData();
+
+                if (isServerMode()) {
+                    await loadServerState();
+                }
+
                 renderCategories();
                 renderPrompts();
                 initializeEventHandlers();
 
                 appState.isInitialized = true;
                 updateStorageStatus();
-                void restoreFileHandle();
+                if (!isServerMode()) void restoreFileHandle();
             } catch (error) {
                 console.error('Fehler bei der Initialisierung:', error);
                 showNotification('Fehler beim Starten der Anwendung.', true);
@@ -3289,7 +3472,7 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', initializeApp);
+        document.addEventListener('DOMContentLoaded', () => { void initializeApp(); });
 
         // ============================================================================
         // TESTBARE SCHNITTSTELLE
@@ -3323,6 +3506,11 @@
             movePromptToCategory,
             handleBackupButton,
             isFileBackupSupported,
+            isServerMode,
+            getServerStatus: () => ({
+                status: serverBackup.status,
+                lastSavedAt: serverBackup.lastSavedAt
+            }),
             getFileBackupStatus: () => ({
                 status: fileBackup.status,
                 hasHandle: Boolean(fileBackup.handle),

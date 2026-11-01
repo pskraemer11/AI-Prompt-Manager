@@ -9,6 +9,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "start": "node serve.mjs",
     "test": "node --test tests/",
     "check": "node scripts/check.mjs",
     "verify": "npm run check && npm test"
