@@ -92,7 +92,9 @@ template and are activated per clone:
 git config core.hooksPath .githooks
 ```
 
-The gate runs `node scripts/check.mjs`, `actionlint`, and `npm test`. CI runs the
+The gate runs `node scripts/check.mjs`, `actionlint`, and `npm test`. The hooks
+additionally need `gitleaks` and `actionlint` (`winget install Gitleaks.Gitleaks
+rhysd.actionlint`); `pre-push` fails closed when `gitleaks` is missing. CI runs the
 same tests on Ubuntu and Windows, checks the workflows with actionlint, and runs
 the privacy/secret hook for every push and pull request.
 

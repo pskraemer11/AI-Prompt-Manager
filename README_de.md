@@ -93,7 +93,9 @@ gemeinsamen Vorlage und werden pro Klon aktiviert:
 git config core.hooksPath .githooks
 ```
 
-Das Gate führt `node scripts/check.mjs`, `actionlint` und `npm test` aus. Die CI
+Das Gate führt `node scripts/check.mjs`, `actionlint` und `npm test` aus. Die Hooks
+benötigen zusätzlich `gitleaks` und `actionlint` (`winget install Gitleaks.Gitleaks
+rhysd.actionlint`); `pre-push` blockiert ohne `gitleaks` (fail closed). Die CI
 testet auf Ubuntu und Windows, prüft die Workflows mit actionlint und führt die
 Privacy-/Secret-Prüfung für jeden Push und Pull Request aus.
 
