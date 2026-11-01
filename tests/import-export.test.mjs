@@ -230,3 +230,24 @@ test('zu große Importe werden vor dem Einlesen abgelehnt', () => {
     assert.equal(decoded.ok, false);
     assert.match(decoded.errors[0], /Zu viele Prompts/);
 });
+
+test('neu gewählte Backup-Datei ohne Inhalt gilt als leer', async () => {
+    const notFound = new Error('nicht vorhanden');
+    notFound.name = 'NotFoundError';
+
+    const decoded = await api.readDataFile({
+        getFile: async () => { throw notFound; }
+    });
+
+    assert.equal(decoded.ok, true);
+    assert.equal(decoded.empty, true);
+});
+
+test('leere Backup-Datei gilt als leer', async () => {
+    const decoded = await api.readDataFile({
+        getFile: async () => ({ size: 0 })
+    });
+
+    assert.equal(decoded.ok, true);
+    assert.equal(decoded.empty, true);
+});

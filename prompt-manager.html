@@ -1508,7 +1508,25 @@
         }
 
         async function readDataFile(handle) {
-            const file = await handle.getFile();
+            let file;
+            try {
+                file = await handle.getFile();
+            } catch (error) {
+                // Eine neu gewählte Datei existiert erst nach dem ersten Schreiben.
+                if (error && error.name === 'NotFoundError') {
+                    return {
+                        ok: true,
+                        empty: true,
+                        version: CONFIG.EXPORT_VERSION,
+                        categories: [],
+                        prompts: [],
+                        warnings: [],
+                        errors: []
+                    };
+                }
+                throw error;
+            }
+
             if (file.size === 0) {
                 return {
                     ok: true,
@@ -3249,6 +3267,7 @@
             validateData,
             validateImportedData,
             decodeBackup,
+            readDataFile,
             encodeBackup,
             mergeImportedData,
             promptFingerprint,
