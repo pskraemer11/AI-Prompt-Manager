@@ -83,6 +83,7 @@ Requirements: Node.js 20 or newer. There are no npm dependencies.
 npm test          # behavior tests (node:test + node:vm, no browser needed)
 npm run check     # static checks: syntax, CSP, offline limits, IDs, handlers
 npm run verify    # both
+bash scripts/hooks-testrun.sh   # five pre-push hook probes (Git Bash)
 ```
 
 Git hooks (local secret scan, privacy guard, test gate) come from the shared

@@ -93,3 +93,6 @@ jobs:
           set -euo pipefail
           printf '%s\n' "refs/heads/ci $NACHHER refs/heads/ziel $VORHER" \
             | bash .githooks/pre-push
+
+      - name: Verhaltensproben des Hooks
+        run: bash scripts/hooks-testrun.sh
