@@ -55,6 +55,12 @@ test('http(s), mailto und relative Links bleiben erlaubt', () => {
     assert.match(api.renderInline('[a](#abschnitt)'), /href="#abschnitt"/);
 });
 
+test('Anführungszeichen und spitze Klammern sind in URLs nicht erlaubt', () => {
+    assert.equal(api.sanitizeUrl('https://example.invalid/"onerror="'), null);
+    assert.equal(api.sanitizeUrl("https://example.invalid/'onerror='"), null);
+    assert.equal(api.sanitizeUrl('https://example.invalid/<script>'), null);
+});
+
 test('nur eingebettete Rasterbilder werden als img gerendert', () => {
     assert.match(
         api.renderInline('![x](data:image/png;base64,iVBORw0KGgo=)'),
