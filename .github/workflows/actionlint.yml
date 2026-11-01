@@ -1,0 +1,28 @@
+# Statischer Check der Workflow-Dateien selbst.
+#
+# Die Projekttests decken .github/workflows nicht ab: Eine Datei kann als
+# YAML parsen und auf GitHub trotzdem scheitern, etwa wenn eine Funktion wie
+# hashFiles dort steht, wo die Kontext-Tabelle sie verbietet. actionlint
+# kennt diese Kontexte. Das gepinnte Docker-Image bringt shellcheck mit,
+# also werden auch die run:-Bloecke geprueft.
+#
+# Lokal laeuft actionlint im Test-Gate; dieser Workflow deckt ausserdem
+# Aenderungen ab, die den Gate umgehen.
+name: actionlint
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Workflow-Dateien prüfen
+        uses: docker://rhysd/actionlint:1.7.12
+        with:
+          args: -color

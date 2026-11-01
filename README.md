@@ -1,6 +1,6 @@
 # AI Prompt Manager / KISS Design
 
-Local AI prompt management with categories, tags, import/export, and Markdown display. 
+Local AI prompt management with categories, tags, import/export, and Markdown display.
 
 Runs entirely in the browser - everything stays on the device (LocalStorage).
 No data leaves the device, and no internet connection is required (no CDN, no requests).
@@ -21,18 +21,84 @@ KISS means "Keep it simple, stupid".
 - **Export / Import:** Back up data as JSON (📤 Export) and restore it (📥 Import).
   The import **merges rather than overwrites**: existing categories and prompts are preserved,
   new ones are added; duplicates (same ID or identical title + content) are skipped.
+  Imports are validated and limited; entries with invalid fields are reported and skipped.
 - **Import chat history:** Import chat histories from any chat AI (📋 button).
   Markdown (headings, tables, lists, task lists, code, quotes, bold/italics,
   images, links) is rendered live in the preview and displayed formatted in the detail view.
 - **Categories:** Use ⚙️ to create, rename, and assign icons to categories.
+  The detail view has a **move control** to move a prompt to another category.
+- **File backup:** In Chromium browsers, 📁 **Backup-Datei** connects a JSON file.
+  Every change is written back to that file, so the data survives browser settings
+  that delete cookies and site data on close. The app restores from that file on demand.
+- **Browser storage warning:** If no file backup is connected, the app warns before
+  closing the tab while there are unsaved-to-file changes.
 
-## Notes
+## Data storage and backup
 
-- Data is stored in the browser's LocalStorage.
-  **IMPORTANT:** Export regularly as a backup — deleting the browser cache or profile will erase the data.
-- Only dependency: none (purely local, standalone HTML).
-- The exported backup JSON may contain personal content—keep it intentionally outside
-  the repository.
+Data is stored in the browser's LocalStorage. **Browser settings that clear cookies
+or site data on close also clear LocalStorage** - in that case the data is gone after
+closing the browser unless a backup exists.
+
+Two independent safety nets are built in:
+
+1. **JSON export** (📤) downloads a dated `prompt-manager-backup-*.json`.
+2. **File backup** (📁) keeps a JSON file outside the browser and updates it after
+   every change. Requires the File System Access API (Chrome, Edge, Chromium);
+   Firefox users keep using export/import.
+
+On startup with an empty LocalStorage, the app shows a restore banner and an
+import button in the empty state. Existing backups remain importable.
+
+`prompt-manager-backup-*.json` is gitignored because it may contain personal content.
+
+## Security and privacy
+
+- **Offline guarantee:** The page loads no external scripts, styles, fonts, or images.
+  A Content-Security-Policy blocks network connections (`connect-src 'none'`,
+  `img-src data:`, `default-src 'none'`).
+- **External images in Markdown are not loaded.** They are rendered as a link marked
+  "(external, not loaded)"; only embedded `data:image/...` raster images are displayed.
+- **HTML is escaped** in prompts, categories, tags, and Markdown. Attribute values
+  escape quotes; links allow only `http(s)`, `mailto`, relative paths, and fragments.
+  `javascript:`, `data:`, `file:`, and protocol-relative URLs are blocked.
+- **Import validation:** schema checks, size limits (25 MB file, 10,000 prompts,
+  500 categories), field normalization, and content truncation at 50,000 characters.
+
+## Limits
+
+| Field | Limit |
+| --- | --- |
+| Title | 100 characters |
+| Content | 50,000 characters |
+| Tags | 20 per prompt, 40 characters each |
+| Category name | 50 characters |
+| Import file | 25 MB |
+
+## Development
+
+Requirements: Node.js 20 or newer. There are no npm dependencies.
+
+```powershell
+npm test          # behavior tests (node:test + node:vm, no browser needed)
+npm run check     # static checks: syntax, CSP, offline limits, IDs, handlers
+npm run verify    # both
+```
+
+Git hooks (local secret scan, privacy guard, test gate) come from the shared
+template and are activated per clone:
+
+```powershell
+git config core.hooksPath .githooks
+```
+
+The gate runs `node scripts/check.mjs`, `actionlint`, and `npm test`. CI runs the
+same tests on Ubuntu and Windows, checks the workflows with actionlint, and runs
+the privacy/secret hook for every push and pull request.
+
+The application exposes a small test surface as `window.PromptManager`
+(Markdown renderer, URL sanitizer, import validation, merge and move logic).
+Tests load the real inline script from `prompt-manager.html`; there is no copy
+of the implementation in the test suite.
 
 ## License
 

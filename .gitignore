@@ -7,6 +7,11 @@ prompt-manager-backup-*.json
 Thumbs.db
 Desktop.ini
 
+# =================== Development ===================
+node_modules/
+coverage/
+*.log
+
 # =================== Private project docs ===================
 # Personal changelog/compaction notes live in the private workspace
 # (AI+IDE-Hints), never in this public repository.

@@ -1,0 +1,16 @@
+{
+  "name": "ai-prompt-manager",
+  "version": "2.2.0",
+  "private": true,
+  "description": "Lokale Promptverwaltung als eigenständige HTML-Datei",
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test tests/",
+    "check": "node scripts/check.mjs",
+    "verify": "npm run check && npm test"
+  }
+}

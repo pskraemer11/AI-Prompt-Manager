@@ -1,0 +1,28 @@
+{
+  "version": "2.1",
+  "exportDate": "2026-10-21T10:28:54.000Z",
+  "categories": [
+    { "id": "coding", "name": "Programmierung", "icon": "💻" },
+    { "id": "research", "name": "Forschung", "icon": "🔬" }
+  ],
+  "prompts": [
+    {
+      "id": "prompt_1",
+      "title": "Beispiel eins",
+      "category": "coding",
+      "content": "# Hallo\n\n**Fett** und `Code`.",
+      "tags": ["python", "beispiel"],
+      "createdAt": "2026-10-21T10:00:00.000Z",
+      "updatedAt": "2026-10-21T10:00:00.000Z"
+    },
+    {
+      "id": "prompt_2",
+      "title": "Beispiel zwei",
+      "category": "research",
+      "content": "Zweiter Inhalt ohne Markdown.",
+      "tags": [],
+      "createdAt": "2026-10-21T10:01:00.000Z",
+      "updatedAt": "2026-10-21T10:01:00.000Z"
+    }
+  ]
+}

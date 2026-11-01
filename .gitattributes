@@ -1,0 +1,25 @@
+# Zeilenenden vereinheitlichen. Ohne diese Regeln erzeugen Anhänge an
+# bestehende Dateien Voll-Diffs, sobald CRLF und LF gemischt sind
+# (core.autocrlf=true auf Windows).
+
+* text=auto eol=lf
+
+*.md text eol=lf
+*.html text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.sh text eol=lf
+
+# Git-Hooks haben keine Endung; CRLF macht sie in der Bash unbrauchbar.
+.githooks/* text eol=lf
+.gitattributes text eol=lf
+
+# Native Windows-Skripte bleiben CRLF.
+*.ps1 text eol=crlf
+
+# Binärdateien nicht normalisieren.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary

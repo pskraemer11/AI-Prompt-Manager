@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!--
+        Inhalts-Sicherheitsrichtlinie: keine Netzwerkziele, keine Frames,
+        keine Objekte. Bilder sind ausschließlich eingebettete data:-URIs;
+        externe Bilder werden vom Renderer als Link ausgegeben. Inline-Stile
+        und das Inline-Skript dieser Einzeldatei bleiben erlaubt.
+    -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'">
+    <!--
         Prompt Manager Pro — lokale Promptverwaltung (einzelne HTML-Datei)
         Copyright (C) 2026 pskraemer11
 
@@ -373,6 +381,14 @@
             will-change: opacity;
         }
 
+        .modal.open {
+            display: block;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
         .modal-content {
             position: relative;
             background: white;
@@ -606,6 +622,120 @@
             color: #64748b;
         }
 
+        .empty-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        /* Dauerhafter Speicher */
+        .storage-banner {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            margin: 16px 20px 0;
+            padding: 12px 16px;
+            border: 1px solid #fcd34d;
+            background: #fffbeb;
+            color: #92400e;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        .storage-banner-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 240px;
+        }
+
+        .storage-banner-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .storage-status {
+            margin-top: 10px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            background: #eef2f7;
+            color: #475569;
+            font-size: 11px;
+            line-height: 1.35;
+        }
+
+        .storage-status[data-state="active"] {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .storage-status[data-state="error"],
+        .storage-status[data-state="permission"] {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Detailansicht */
+        .detail-category {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #e0e7ff;
+            color: #4f46e5;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        .move-row {
+            margin: 0 0 18px;
+            padding: 14px;
+            background: #f8fafc;
+            border-radius: 10px;
+        }
+
+        .move-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 6px;
+        }
+
+        .move-controls .form-select {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        /* Kategorie-Bearbeitung */
+        .category-edit {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .category-edit .form-input {
+            flex: 1;
+            min-width: 160px;
+        }
+
+        /* Nicht geladene bzw. blockierte Markdown-Ziele */
+        .blocked-link {
+            color: #b45309;
+            text-decoration: line-through dotted;
+        }
+
+        .external-hint {
+            color: #94a3b8;
+            font-size: 0.85em;
+        }
+
         /* Responsive Design - VERBESSERT: Bessere Breakpoints */
         @media (max-width: 768px) {
             .container {
@@ -679,7 +809,7 @@
         - Sidebar: Kategorien und Navigation
         - Main: Suchfeld, Aktionen, Content-Bereich
     -->
-    <div class="container">
+    <div class="container" id="appRoot">
         <!-- SIDEBAR: Navigation und Kategorien -->
         <aside class="sidebar" role="navigation" aria-label="Hauptnavigation">
             <div class="sidebar-header">
@@ -701,9 +831,15 @@
                 <button class="control-item" onclick="importData()" aria-label="Daten importieren">
                     📥 Import
                 </button>
+                <button class="control-item" id="connectFileBtn" onclick="handleBackupButton()" aria-label="Datei-Backup verbinden oder fortschreiben">
+                    📁 Backup-Datei
+                </button>
                 <button class="control-item" onclick="showHelp()" aria-label="Hilfe anzeigen">
                     ❓ Hilfe
                 </button>
+                <div class="storage-status" id="storageStatus" role="status" aria-live="polite">
+                    Nur Browser-Speicher
+                </div>
             </div>
         </aside>
 
@@ -725,15 +861,37 @@
                 </div>
             </header>
 
+            <!-- Dauerhafter Speicher: Hinweis und Wiederherstellung -->
+            <div class="storage-banner" id="storageBanner" role="status" hidden>
+                <div class="storage-banner-text">
+                    <strong>Daten liegen nur im Browser-Speicher.</strong>
+                    <span>Beim Löschen der Website-Daten sind sie weg. Verbinde eine Backup-Datei oder exportiere regelmäßig.</span>
+                </div>
+                <div class="storage-banner-actions">
+                    <button class="btn btn-primary btn-small" onclick="handleBackupButton()">
+                        Backup-Datei verbinden
+                    </button>
+                    <button class="btn btn-secondary btn-small" onclick="importData()">
+                        JSON importieren
+                    </button>
+                    <button class="btn btn-secondary btn-small" onclick="dismissStorageBanner()"
+                            aria-label="Hinweis schließen">×</button>
+                </div>
+            </div>
+
             <div class="content-area" id="contentArea">
                 <div class="prompt-grid" id="promptGrid" role="list" aria-label="Prompt Liste">
                     <!-- Prompts werden dynamisch eingefügt -->
                 </div>
                 
-                <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-state" id="emptyState" hidden>
                     <div class="empty-icon" aria-hidden="true">📝</div>
                     <div class="empty-title">Noch keine Prompts vorhanden</div>
-                    <p>Erstelle deinen ersten Prompt oder importiere Chatverläufe!</p>
+                    <p>Erstelle deinen ersten Prompt, importiere Chatverläufe oder stelle ein Backup wieder her.</p>
+                    <div class="empty-actions">
+                        <button class="btn btn-primary" onclick="showAddModal()">➕ Ersten Prompt erstellen</button>
+                        <button class="btn btn-secondary" onclick="importData()">📥 Backup importieren</button>
+                    </div>
                 </div>
             </div>
         </main>
@@ -742,7 +900,7 @@
     <!-- MODALS: Strukturiert und barrierefrei -->
     
     <!-- Modal: Neuer/Bearbeiten Prompt -->
-    <div class="modal" id="addModal" role="dialog" aria-labelledby="addModalTitle" aria-hidden="true">
+    <div class="modal" id="addModal" role="dialog" aria-modal="true" aria-labelledby="addModalTitle" aria-hidden="true">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title" id="addModalTitle">Neuen Prompt erstellen</h3>
@@ -783,7 +941,7 @@
     </div>
 
     <!-- Modal: Kategorien verwalten -->
-    <div class="modal" id="categoryManagerModal" role="dialog" aria-labelledby="categoryManagerTitle" aria-hidden="true">
+    <div class="modal" id="categoryManagerModal" role="dialog" aria-modal="true" aria-labelledby="categoryManagerTitle" aria-hidden="true">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title" id="categoryManagerTitle">Kategorien verwalten</h3>
@@ -815,7 +973,7 @@
     </div>
 
     <!-- Modal: HF Chat Import -->
-    <div class="modal" id="importHFModal" role="dialog" aria-labelledby="importHFModalTitle" aria-hidden="true">
+    <div class="modal" id="importHFModal" role="dialog" aria-modal="true" aria-labelledby="importHFModalTitle" aria-hidden="true">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title" id="importHFModalTitle">Chatverlauf einfügen</h3>
@@ -846,13 +1004,22 @@
     </div>
 
     <!-- Modal: Prompt anzeigen -->
-    <div class="modal" id="viewModal" role="dialog" aria-labelledby="viewModalTitle" aria-hidden="true">
+    <div class="modal" id="viewModal" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle" aria-hidden="true">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title" id="viewModalTitle"></h3>
                 <button class="close-btn" onclick="closeModal('viewModal')" aria-label="Modal schließen">&times;</button>
             </div>
             <div id="viewContent"></div>
+            <div class="move-row">
+                <label for="moveCategorySelect" class="form-label">In andere Kategorie verschieben</label>
+                <div class="move-controls">
+                    <select id="moveCategorySelect" class="form-select"></select>
+                    <button type="button" class="btn btn-secondary" onclick="moveCurrentPrompt()">
+                        📁 Verschieben
+                    </button>
+                </div>
+            </div>
             <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
                 <button class="btn btn-secondary" onclick="copyPrompt()">📋 Kopieren</button>
                 <button class="btn btn-primary" onclick="editCurrentPrompt()">✏️ Bearbeiten</button>
@@ -862,7 +1029,7 @@
     </div>
 
     <!-- Modal: Hilfe -->
-    <div class="modal" id="helpModal" role="dialog" aria-labelledby="helpModalTitle" aria-hidden="true">
+    <div class="modal" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle" aria-hidden="true">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title" id="helpModalTitle">Hilfe & Tipps</h3>
@@ -871,15 +1038,21 @@
             <div style="line-height: 1.6; color: #374151;">
                 <h4 style="margin-bottom: 10px; color: #1e293b;">🎯 Wichtige Funktionen</h4>
                 <ul style="margin-left: 20px; margin-bottom: 20px;">
-                    <li><strong>Kategorien verwalten:</strong> Erstelle eigene Themenfelder mit individuellen Icons</li>
+                    <li><strong>Kategorien verwalten:</strong> Kategorien anlegen, umbenennen und Prompts über die Detailansicht verschieben</li>
                     <li><strong>Neue Prompts einfügen:</strong> Nutze das "+" Symbol für neue Prompts</li>
-                    <li><strong>Chat einfügen:</strong> Füge Chatverlauf hier ein</li>
+                    <li><strong>Chat einfügen:</strong> Füge einen Chatverlauf ein; Markdown wird live geprüft</li>
                     <li><strong>Import:</strong> Bestehende Daten bleiben erhalten, Doppelungen werden übersprungen</li>
-                    <li><strong>Backup:</strong> Exportiere deine Daten regelmäßig als JSON</li>
+                    <li><strong>Backup:</strong> Exportiere JSON oder verbinde eine Backup-Datei, die automatisch fortgeschrieben wird</li>
                 </ul>
                 <h4 style="margin-bottom: 10px; color: #1e293b;">💾 Datensicherheit</h4>
-                <p>Alle Daten werden <strong>lokal in deinem Browser</strong> gespeichert. 
-                Lösche den Browser-Cache nicht, sonst sind die Daten weg! Nutze regelmäßig die Export-Funktion.</p>
+                <p>Alle Daten werden <strong>lokal in deinem Browser</strong> gespeichert. Browser-Einstellungen,
+                die Website-Daten beim Schließen löschen, entfernen auch diesen Speicher.</p>
+                <p>Deshalb: <strong>Backup-Datei verbinden</strong> (Chromium-Browser) oder regelmäßig
+                <strong>Export</strong> nutzen. Eine verbundene Datei bleibt außerhalb des Browsers erhalten
+                und wird bei jeder Änderung aktualisiert.</p>
+                <h4 style="margin-bottom: 10px; color: #1e293b;">🔒 Offline und Sicherheit</h4>
+                <p>Die Anwendung lädt nichts aus dem Internet. Externe Bilder in Markdown werden nicht
+                geladen, sondern als Link angezeigt. Links werden nur nach einem Klick geöffnet.</p>
             </div>
         </div>
     </div>
@@ -889,20 +1062,21 @@
 
     <script>
         /**
-         * PROMPT MANAGER PRO - OPTIMIERTE VERSION
-         * 
-         * Diese Anwendung verwendet:
-         * - Modularer Code mit klaren Trennungen
-         * - Event-Delegation statt vieler einzelner Listener
-         * - Debouncing für Suchfunktionen
-         * - Fehlerbehandlung für alle kritischen Operationen
-         * - Performance-Optimierungen für große Datenmengen
+         * PROMPT MANAGER PRO — lokale Promptverwaltung (einzelne HTML-Datei)
+         *
+         * Sicherheits- und Datenmodell:
+         * - Markdown wird lokal gerendert; HTML wird vollständig escaped.
+         * - URLs werden auf http(s), mailto und relative Ziele beschränkt.
+         * - Externe Bilder werden nicht geladen, sondern als Link ausgegeben.
+         * - Importe werden schema-geprüft, begrenzt und migriert.
+         *
+         * Testbare Schnittstelle: window.PromptManager (siehe tests/).
          */
 
         'use strict';
 
         // ============================================================================
-        // KONFIGURATION UND GLOBALE VARIABLEN
+        // KONFIGURATION UND GLOBALER ZUSTAND
         // ============================================================================
 
         const CONFIG = {
@@ -917,669 +1091,140 @@
                 { id: 'creative', name: 'Kreatives', icon: '🎨' },
                 { id: 'business', name: 'Business', icon: '💼' }
             ],
+            EXPORT_VERSION: '2.2',
             MAX_TITLE_LENGTH: 100,
             MAX_CONTENT_LENGTH: 50000,
-            DEBOUNCE_DELAY: 300
+            MAX_CATEGORY_NAME_LENGTH: 50,
+            MAX_CATEGORY_ICON_LENGTH: 16,
+            MAX_TAGS: 20,
+            MAX_TAG_LENGTH: 40,
+            MAX_CATEGORIES: 500,
+            MAX_PROMPTS: 10000,
+            MAX_IMPORT_BYTES: 25 * 1024 * 1024,
+            DEBOUNCE_DELAY: 300,
+            BACKUP_FILE_NAME: 'prompt-manager-data.json'
         };
 
-        // Anwendungsstatus
+        const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+        const HTML_ESCAPES = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        };
+
         let appState = {
             categories: [],
             prompts: [],
             currentCategory: 'all',
             currentPromptId: null,
             editingPromptId: null,
-            isInitialized: false
+            editingCategoryId: null,
+            isInitialized: false,
+            dirtySinceExport: false,
+            saveRevision: 0,
+            lastSavedAt: null,
+            lastExportAt: null,
+            bannerDismissed: false
         };
 
-        // Debounce-Funktion für Performance
+        const modalState = {
+            lastFocused: null
+        };
+
+        const fileBackup = {
+            handle: null,
+            status: 'none',
+            lastWriteAt: null,
+            lastError: null,
+            timer: null
+        };
+
+        let idCounter = 0;
+
+        // ============================================================================
+        // HILFSFUNKTIONEN
+        // ============================================================================
+
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
                 clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
+                timeout = setTimeout(() => func(...args), wait);
             };
         }
 
-        // ============================================================================
-        // DATENVERWALTUNG - SICHERE LOCALSTORAGE-OPERATIONEN
-        // ============================================================================
+        function createId(prefix) {
+            const cryptoObject = window.crypto || (typeof globalThis !== 'undefined' ? globalThis.crypto : null);
+            if (cryptoObject && typeof cryptoObject.randomUUID === 'function') {
+                return `${prefix}_${cryptoObject.randomUUID()}`;
+            }
+            idCounter += 1;
+            return `${prefix}_${Date.now().toString(36)}_${idCounter.toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (character) => HTML_ESCAPES[character]);
+        }
 
         /**
-         * Lädt Daten aus LocalStorage mit Fehlerbehandlung
+         * Erlaubt nur unbedenkliche Ziele. `javascript:`, `data:` (außer Bilddaten)
+         * und andere Schemata werden verworfen. Relative Ziele bleiben erlaubt.
          */
-        function loadData() {
+        function sanitizeUrl(raw, options = {}) {
+            const value = String(raw ?? '').trim();
+            if (!value) return null;
+
+            const maxLength = options.allowImageData ? 100000 : 2048;
+            if (value.length > maxLength) return null;
+            if (/[\u0000-\u001f\u007f\s\uE000\uE001\\]/.test(value)) return null;
+
+            if (options.allowImageData &&
+                /^data:image\/(?:png|jpe?g|gif|webp|avif);base64,[a-z0-9+/=]+$/i.test(value)) {
+                return value;
+            }
+
+            // Protokollrelative Ziele würden beim Klick eine fremde Origin laden.
+            if (/^[\\/]{2}/.test(value)) return null;
+
+            let parsed;
             try {
-                // Kategorien laden
-                const storedCategories = localStorage.getItem(CONFIG.STORAGE_KEYS.CATEGORIES);
-                appState.categories = storedCategories ? JSON.parse(storedCategories) : [...CONFIG.DEFAULT_CATEGORIES];
-                
-                // Prompts laden
-                const storedPrompts = localStorage.getItem(CONFIG.STORAGE_KEYS.PROMPTS);
-                appState.prompts = storedPrompts ? JSON.parse(storedPrompts) : [];
-                
-                // Datenvalidierung
-                validateData();
-                
-                console.log('✅ Daten erfolgreich geladen:', {
-                    categories: appState.categories.length,
-                    prompts: appState.prompts.length
-                });
-                
+                parsed = new URL(value, 'https://local.invalid/');
             } catch (error) {
-                console.error('❌ Fehler beim Laden der Daten:', error);
-                showNotification('Fehler beim Laden der Daten. Standardwerte werden verwendet.', true);
-                
-                // Fallback auf Standardwerte
-                appState.categories = [...CONFIG.DEFAULT_CATEGORIES];
-                appState.prompts = [];
-            }
-        }
-
-        /**
-         * Speichert Daten sicher im LocalStorage
-         */
-        function saveData() {
-            try {
-                localStorage.setItem(CONFIG.STORAGE_KEYS.CATEGORIES, JSON.stringify(appState.categories));
-                localStorage.setItem(CONFIG.STORAGE_KEYS.PROMPTS, JSON.stringify(appState.prompts));
-                console.log('💾 Daten gespeichert');
-            } catch (error) {
-                console.error('❌ Fehler beim Speichern:', error);
-                showNotification('Fehler beim Speichern. Speicherplatz voll?', true);
-            }
-        }
-
-        /**
-         * Validiert geladene Daten auf Konsistenz
-         */
-        function validateData() {
-            // Sicherstellen, dass alle Prompts eine gültige Kategorie haben
-            const validCategoryIds = new Set(appState.categories.map(cat => cat.id));
-            validCategoryIds.add('all');
-            
-            appState.prompts = appState.prompts.filter(prompt => {
-                if (!prompt || !prompt.id) return false;
-                if (!validCategoryIds.has(prompt.category)) {
-                    console.warn('⚠️ Prompt mit ungültiger Kategorie gefunden:', prompt.category);
-                    prompt.category = appState.categories[0]?.id || 'coding';
-                }
-                return true;
-            });
-        }
-
-        // ============================================================================
-        // RENDER-FUNKTIONEN - PERFORMANCE-OPTIMIERT
-        // ============================================================================
-
-        /**
-         * Rendert alle Kategorien in der Sidebar
-         * OPTIMIERUNG: Verwendet DocumentFragment für bessere Performance
-         */
-        function renderCategories() {
-            const container = document.getElementById('categoryList');
-            if (!container) return;
-
-            const fragment = document.createDocumentFragment();
-
-            // Header für "Alle Prompts"
-            const allItem = createCategoryElement('all', '📊', 'Alle Prompts', appState.prompts.length, appState.currentCategory === 'all');
-            fragment.appendChild(allItem);
-
-            // Einzelne Kategorien
-            appState.categories.forEach(category => {
-                const count = appState.prompts.filter(p => p.category === category.id).length;
-                const isActive = appState.currentCategory === category.id;
-                const element = createCategoryElement(category.id, category.icon, category.name, count, isActive);
-                fragment.appendChild(element);
-            });
-
-            // Container leeren und neu füllen
-            container.innerHTML = '';
-            container.appendChild(fragment);
-
-            // Dropdowns aktualisieren
-            updateCategoryDropdowns();
-        }
-
-        /**
-         * Erstellt ein einzelnes Kategorie-Element mit Event-Listener
-         */
-        function createCategoryElement(id, icon, name, count, isActive) {
-            const div = document.createElement('div');
-            div.className = `category-item ${isActive ? 'active' : ''}`;
-            div.setAttribute('role', 'menuitem');
-            div.setAttribute('tabindex', '0');
-            div.onclick = () => selectCategory(id);
-            div.onkeypress = (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    selectCategory(id);
-                }
-            };
-
-            div.innerHTML = `
-                <span class="category-icon">${icon}</span>
-                <span class="category-name">${name}</span>
-                <span class="category-count">${count}</span>
-            `;
-
-            return div;
-        }
-
-        /**
-         * Aktualisiert Kategorie-Dropdowns in allen Formularen
-         */
-        function updateCategoryDropdowns() {
-            const dropdowns = [
-                document.getElementById('promptCategory'),
-                document.getElementById('hfImportCategory')
-            ];
-
-            dropdowns.forEach(dropdown => {
-                if (!dropdown) return;
-                
-                const currentValue = dropdown.value;
-                dropdown.innerHTML = appState.categories.map(cat => 
-                    `<option value="${cat.id}">${cat.icon} ${cat.name}</option>`
-                ).join('');
-                
-                // Versuchen, vorherige Auswahl beizubehalten
-                if (currentValue && appState.categories.some(c => c.id === currentValue)) {
-                    dropdown.value = currentValue;
-                }
-            });
-        }
-
-        /**
-         * Rendert Prompts mit Such- und Filterfunktion
-         * OPTIMIERUNG: Verwendet DocumentFragment und effiziente Filterung
-         */
-        function renderPrompts() {
-            const grid = document.getElementById('promptGrid');
-            const emptyState = document.getElementById('emptyState');
-            
-            if (!grid || !emptyState) return;
-
-            const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
-            
-            // Effiziente Filterung mit frühem Abbruch
-            let filtered = appState.prompts;
-            
-            if (appState.currentCategory !== 'all') {
-                filtered = filtered.filter(p => p.category === appState.currentCategory);
-            }
-            
-            if (searchTerm) {
-                filtered = filtered.filter(p => 
-                    p.title.toLowerCase().includes(searchTerm) ||
-                    p.content.toLowerCase().includes(searchTerm) ||
-                    p.tags.some(tag => tag.toLowerCase().includes(searchTerm))
-                );
+                return null;
             }
 
-            // Sortierung (neueste zuerst)
-            filtered.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-
-            // Leeren Zustand behandeln
-            if (filtered.length === 0) {
-                grid.innerHTML = '';
-                emptyState.style.display = 'block';
-                return;
+            if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:') {
+                return value;
             }
 
-            emptyState.style.display = 'none';
-
-            // Performance: DocumentFragment für schnelles Rendering
-            const fragment = document.createDocumentFragment();
-            
-            filtered.forEach(prompt => {
-                const category = appState.categories.find(c => c.id === prompt.category) || 
-                               { name: 'Unkategorisiert', icon: '📁' };
-                
-                const card = createPromptCard(prompt, category);
-                fragment.appendChild(card);
-            });
-
-            grid.innerHTML = '';
-            grid.appendChild(fragment);
+            // Relativ oder Fragment: kein Schema vorhanden.
+            if (!/^[A-Za-z][A-Za-z0-9+.-]*:/.test(value)) return value;
+            return null;
         }
 
-        /**
-         * Erstellt eine einzelne Prompt-Karte
-         */
-        function createPromptCard(prompt, category) {
-            const div = document.createElement('div');
-            div.className = 'prompt-card';
-            div.setAttribute('role', 'listitem');
-            div.setAttribute('tabindex', '0');
-            div.onclick = () => viewPrompt(prompt.id);
-            div.onkeypress = (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    viewPrompt(prompt.id);
-                }
-            };
-
-            div.innerHTML = `
-                <div class="prompt-header">
-                    <div style="min-width: 0;">
-                        <div class="prompt-title" title="${escapeHtml(prompt.title)}">${escapeHtml(prompt.title)}</div>
-                    </div>
-                    <div class="prompt-category">
-                        ${escapeHtml(category.icon)} ${escapeHtml(category.name)}
-                    </div>
-                </div>
-                <div class="prompt-content">${escapeHtml(prompt.content)}</div>
-                <div class="prompt-meta">
-                    <div class="prompt-tags">
-                        ${prompt.tags.slice(0, 3).map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
-                        ${prompt.tags.length > 3 ? `<span class="tag">+${prompt.tags.length - 3}</span>` : ''}
-                    </div>
-                    <div>${new Date(prompt.updatedAt).toLocaleDateString('de-DE')}</div>
-                </div>
-            `;
-
-            return div;
+        function normalizeIsoDate(value, fallbackIso) {
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? fallbackIso : date.toISOString();
         }
 
-        // ============================================================================
-        // KATEGORIE-VERWALTUNG
-        // ============================================================================
-
-        /**
-         * Zeigt den Kategorie-Manager an
-         */
-        function showCategoryManager() {
-            renderCategoryManagementList();
-            openModal('categoryManagerModal');
-        }
-
-        /**
-         * Rendert die Liste der verwaltbaren Kategorien
-         */
-        function renderCategoryManagementList() {
-            const container = document.getElementById('categoryManagementList');
-            if (!container) return;
-
-            container.innerHTML = '<h4 style="margin-bottom: 15px; color: #374151;">Vorhandene Kategorien</h4>';
-
-            if (appState.categories.length === 0) {
-                container.innerHTML += '<p style="color: #94a3b8;">Noch keine Kategorien vorhanden.</p>';
-                return;
+        function normalizeTags(tags) {
+            if (!Array.isArray(tags)) return [];
+            const result = [];
+            const seen = new Set();
+            for (const rawTag of tags) {
+                const tag = String(rawTag ?? '').trim().slice(0, CONFIG.MAX_TAG_LENGTH);
+                if (!tag) continue;
+                const key = tag.toLowerCase();
+                if (seen.has(key)) continue;
+                seen.add(key);
+                result.push(tag);
+                if (result.length >= CONFIG.MAX_TAGS) break;
             }
-
-            // Erstelle Liste mit DocumentFragment
-            const fragment = document.createDocumentFragment();
-
-            appState.categories.forEach(category => {
-                const promptCount = appState.prompts.filter(p => p.category === category.id).length;
-                const canDelete = promptCount === 0;
-
-                const item = document.createElement('div');
-                item.className = 'category-list-item';
-                item.innerHTML = `
-                    <div class="category-icon-display">${escapeHtml(category.icon)}</div>
-                    <div class="category-info">
-                        <div class="category-name-display">${escapeHtml(category.name)}</div>
-                        <div class="category-prompt-count">${promptCount} Prompt${promptCount !== 1 ? 's' : ''}</div>
-                    </div>
-                    <div class="category-actions">
-                        <button class="btn btn-secondary btn-small" onclick="editCategory('${category.id}')">Bearbeiten</button>
-                        ${canDelete ? 
-                            `<button class="btn btn-danger btn-small" onclick="deleteCategory('${category.id}')">Löschen</button>` : 
-                            `<button class="btn btn-secondary btn-small" disabled title="Zuerst Prompts löschen" style="opacity: 0.5;">Löschen</button>`
-                        }
-                    </div>
-                `;
-                fragment.appendChild(item);
-            });
-
-            container.appendChild(fragment);
+            return result;
         }
 
-        /**
-         * Fügt eine neue Kategorie hinzu
-         */
-        function addNewCategory() {
-            const nameInput = document.getElementById('newCategoryName');
-            const name = nameInput?.value.trim();
-
-            if (!name) {
-                showNotification('Bitte gib einen Namen ein!', true);
-                return;
-            }
-
-            if (name.length > 50) {
-                showNotification('Name zu lang (max. 50 Zeichen)!', true);
-                return;
-            }
-
-            // Prüfen auf Duplikate (case-insensitive)
-            const exists = appState.categories.some(cat => 
-                cat.name.toLowerCase() === name.toLowerCase()
-            );
-
-            if (exists) {
-                showNotification('Diese Kategorie existiert bereits!', true);
-                return;
-            }
-
-            // Neue Kategorie erstellen
-            const newCategory = {
-                id: 'cat_' + Date.now(), // Eindeutige ID
-                name: name,
-                icon: '📁' // Standard-Icon
-            };
-
-            appState.categories.push(newCategory);
-            saveData();
-
-            // Formular zurücksetzen
-            nameInput.value = '';
-
-            // UI aktualisieren
-            renderCategories();
-            renderCategoryManagementList();
-            showNotification('Kategorie hinzugefügt!');
-        }
-
-        /**
-         * Bearbeitet eine vorhandene Kategorie
-         */
-        function editCategory(catId) {
-            const category = appState.categories.find(c => c.id === catId);
-            if (!category) return;
-
-            // Einfaches Prompt für Namensänderung
-            const newName = prompt(`Kategorie "${category.name}" umbenennen:`, category.name);
-            
-            if (newName === null || newName.trim() === '') return;
-            
-            const trimmedName = newName.trim();
-            
-            if (trimmedName.length > 50) {
-                showNotification('Name zu lang (max. 50 Zeichen)!', true);
-                return;
-            }
-
-            // Duplikat-Prüfung
-            const exists = appState.categories.some(cat => 
-                cat.name.toLowerCase() === trimmedName.toLowerCase() && cat.id !== catId
-            );
-
-            if (exists) {
-                showNotification('Diese Kategorie existiert bereits!', true);
-                return;
-            }
-
-            category.name = trimmedName;
-            saveData();
-            
-            renderCategories();
-            renderCategoryManagementList();
-            renderPrompts(); // Falls sich der Name ändert
-            
-            showNotification('Kategorie aktualisiert!');
-        }
-
-        /**
-         * Löscht eine Kategorie (nur wenn leer)
-         */
-        function deleteCategory(catId) {
-            const promptCount = appState.prompts.filter(p => p.category === catId).length;
-            
-            if (promptCount > 0) {
-                showNotification(`Kategorie kann nicht gelöscht werden (enthält ${promptCount} Prompt${promptCount !== 1 ? 's' : ''})!`, true);
-                return;
-            }
-
-            if (!confirm('Möchtest du diese Kategorie wirklich löschen?')) return;
-
-            appState.categories = appState.categories.filter(c => c.id !== catId);
-            
-            // Aktuelle Kategorie anpassen falls nötig
-            if (appState.currentCategory === catId) {
-                appState.currentCategory = 'all';
-            }
-
-            saveData();
-            renderCategories();
-            renderCategoryManagementList();
-            renderPrompts();
-            
-            showNotification('Kategorie gelöscht');
-        }
-
-        // ============================================================================
-        // PROMPT-VERWALTUNG
-        // ============================================================================
-
-        /**
-         * Zeigt das Modal für neuen/bearbeiteten Prompt
-         */
-        function showAddModal() {
-            appState.editingPromptId = null;
-            const modal = document.getElementById('addModal');
-            const title = document.getElementById('addModalTitle');
-            const form = document.getElementById('promptForm');
-
-            title.textContent = 'Neuen Prompt erstellen';
-            form.reset();
-
-            updateMarkdownPreview();
-
-            // Standard-Kategorie setzen
-            if (appState.currentCategory !== 'all' && appState.categories.some(c => c.id === appState.currentCategory)) {
-                document.getElementById('promptCategory').value = appState.currentCategory;
-            }
-
-            openModal('addModal');
-        }
-
-        /**
-         * Zeigt Modal für HF Chat Import
-         */
-        function showImportHFModal() {
-            const modal = document.getElementById('importHFModal');
-            const textarea = document.getElementById('hfChatContent');
-            
-            textarea.value = '';
-            updateMarkdownPreview('chat');
-            openModal('importHFModal');
-        }
-
-        /**
-         * Importiert HF Chat-Verlauf
-         */
-        function importHFChat() {
-            const content = document.getElementById('hfChatContent')?.value.trim();
-            const category = document.getElementById('hfImportCategory')?.value;
-
-            if (!content) {
-                showNotification('Bitte füge einen Chatverlauf ein!', true);
-                return;
-            }
-
-            // Titel extrahieren (erste sinnvolle Zeile)
-            const lines = content.split('\n');
-            let title = 'Chat-Import';
-            
-            for (let line of lines) {
-                const trimmed = line.trim();
-                if (trimmed && trimmed.length > 5 && trimmed.length < 80) {
-                    title = trimmed;
-                    break;
-                }
-            }
-
-            // Längenbegrenzung
-            if (content.length > CONFIG.MAX_CONTENT_LENGTH) {
-                showNotification('Chat-Verlauf zu lang (max. 50.000 Zeichen)!', true);
-                return;
-            }
-
-            const now = new Date().toISOString();
-            const prompt = {
-                id: 'prompt_' + Date.now(),
-                title: title.substring(0, CONFIG.MAX_TITLE_LENGTH) + (title.length > CONFIG.MAX_TITLE_LENGTH ? '...' : ''),
-                category: category,
-                content: content,
-                tags: ['imported', 'chat'],
-                createdAt: now,
-                updatedAt: now
-            };
-
-            appState.prompts.push(prompt);
-            saveData();
-            
-            renderCategories();
-            renderPrompts();
-            closeModal('importHFModal');
-            
-            showNotification('Chatverlauf eingefügt!');
-        }
-
-        /**
-         * Zeigt Prompt-Details an
-         */
-        function viewPrompt(id) {
-            const prompt = appState.prompts.find(p => p.id === id);
-            if (!prompt) return;
-
-            appState.currentPromptId = id;
-            const category = appState.categories.find(c => c.id === prompt.category) || 
-                           { name: 'Unkategorisiert', icon: '📁' };
-
-            const modal = document.getElementById('viewModal');
-            const title = document.getElementById('viewModalTitle');
-            const content = document.getElementById('viewContent');
-
-            title.textContent = prompt.title;
-            content.innerHTML = `
-                <div style="margin-bottom: 15px;">
-                    <span style="display: inline-flex; align-items: center; gap: 5px; background: #e0e7ff; color: #4f46e5; padding: 4px 12px; border-radius: 20px; font-size: 13px;">
-                        ${escapeHtml(category.icon)} ${escapeHtml(category.name)}
-                    </span>
-                </div>
-                <div class="markdown-preview markdown-body" style="border-left: 4px solid #4f46e5; background: #f8fafc; padding: 20px; margin-bottom: 20px; max-height: 60vh;">
-                    ${renderMarkdown(prompt.content)}
-                </div>
-                <div style="margin-bottom: 15px;">
-                    ${prompt.tags.map(tag => `<span class="tag" style="font-size: 13px; padding: 4px 10px;">${escapeHtml(tag)}</span>`).join(' ')}
-                </div>
-                <div style="color: #94a3b8; font-size: 12px;">
-                    Erstellt: ${new Date(prompt.createdAt).toLocaleString('de-DE')} | 
-                    Zuletzt bearbeitet: ${new Date(prompt.updatedAt).toLocaleString('de-DE')}
-                </div>
-            `;
-
-            openModal('viewModal');
-        }
-
-        /**
-         * Bearbeitet aktuellen Prompt
-         */
-        function editCurrentPrompt() {
-            if (!appState.currentPromptId) return;
-
-            const prompt = appState.prompts.find(p => p.id === appState.currentPromptId);
-            if (!prompt) return;
-
-            appState.editingPromptId = appState.currentPromptId;
-            
-            const modal = document.getElementById('addModal');
-            const title = document.getElementById('addModalTitle');
-            
-            title.textContent = 'Prompt bearbeiten';
-            document.getElementById('promptTitle').value = prompt.title;
-            document.getElementById('promptCategory').value = prompt.category;
-            document.getElementById('promptContent').value = prompt.content;
-            document.getElementById('promptTags').value = prompt.tags.join(', ');
-
-            updateMarkdownPreview();
-
-            closeModal('viewModal');
-            openModal('addModal');
-        }
-
-        /**
-         * Löscht aktuellen Prompt
-         */
-        function deleteCurrentPrompt() {
-            if (!appState.currentPromptId) return;
-            
-            if (!confirm('Möchtest du diesen Prompt wirklich löschen?')) return;
-
-            appState.prompts = appState.prompts.filter(p => p.id !== appState.currentPromptId);
-            saveData();
-            
-            renderCategories();
-            renderPrompts();
-            closeModal('viewModal');
-            
-            appState.currentPromptId = null;
-            showNotification('Prompt gelöscht');
-        }
-
-        /**
-         * Kopiert Prompt-Inhalt in Zwischenablage
-         */
-        function copyPrompt() {
-            if (!appState.currentPromptId) return;
-
-            const prompt = appState.prompts.find(p => p.id === appState.currentPromptId);
-            if (!prompt) return;
-
-            navigator.clipboard.writeText(prompt.content)
-                .then(() => showNotification('In Zwischenablage kopiert!'))
-                .catch(() => showNotification('Fehler beim Kopieren', true));
-        }
-
-        // ============================================================================
-        // IMPORT/EXPORT - DATENSICHERHEIT
-        // ============================================================================
-
-        /**
-         * Exportiert alle Daten als JSON
-         */
-        function exportData() {
-            try {
-                const data = {
-                    version: '2.1',
-                    exportDate: new Date().toISOString(),
-                    categories: appState.categories,
-                    prompts: appState.prompts
-                };
-
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `prompt-manager-backup-${new Date().toISOString().split('T')[0]}.json`;
-                a.style.display = 'none';
-                
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                
-                URL.revokeObjectURL(url);
-                showNotification('Daten exportiert!');
-                
-            } catch (error) {
-                console.error('❌ Export-Fehler:', error);
-                showNotification('Fehler beim Exportieren', true);
-            }
-        }
-
-        /**
-         * Normalisiert Text für die Dubletten-Erkennung
-         */
         function promptFingerprint(title, content) {
             const normalize = (text) => String(text || '')
                 .toLowerCase()
@@ -1588,208 +1233,920 @@
             return `${normalize(title)}\u0000${normalize(content)}`;
         }
 
+        // ============================================================================
+        // DATEN-NORMALISIERUNG UND -VALIDIERUNG
+        // ============================================================================
+
+        function normalizeCategory(raw) {
+            if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+
+            const originalId = String(raw.id ?? '').trim();
+            const name = String(raw.name ?? '').trim().replace(/\s+/g, ' ')
+                .slice(0, CONFIG.MAX_CATEGORY_NAME_LENGTH);
+            if (!name) return null;
+
+            let changed = false;
+            let id = originalId;
+            if (!SAFE_ID.test(id)) {
+                id = createId('cat');
+                changed = true;
+            }
+
+            const icon = String(raw.icon ?? '📁').trim().slice(0, CONFIG.MAX_CATEGORY_ICON_LENGTH) || '📁';
+            if (icon !== raw.icon) changed = true;
+            if (name !== raw.name) changed = true;
+
+            return { id, originalId, name, icon, changed };
+        }
+
+        function normalizePrompt(raw, context) {
+            if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+
+            const title = String(raw.title ?? '').trim().replace(/\s+/g, ' ');
+            if (!title) return null;
+
+            let changed = false;
+            let id = String(raw.id ?? '').trim();
+            if (!SAFE_ID.test(id)) {
+                id = createId('prompt');
+                changed = true;
+            }
+
+            const clippedTitle = title.slice(0, CONFIG.MAX_TITLE_LENGTH);
+            if (clippedTitle !== raw.title) changed = true;
+
+            let content = String(raw.content ?? '');
+            const contentTruncated = content.length > CONFIG.MAX_CONTENT_LENGTH;
+            if (contentTruncated) {
+                content = content.slice(0, CONFIG.MAX_CONTENT_LENGTH);
+                changed = true;
+            }
+
+            const tags = normalizeTags(raw.tags);
+            if (!Array.isArray(raw.tags) || tags.length !== raw.tags.length) changed = true;
+
+            const rawCategory = String(raw.category ?? '').trim();
+            let category = context.idMap.get(rawCategory) || rawCategory;
+            if (!context.categoryIds.has(category)) {
+                category = context.fallbackCategory;
+                changed = true;
+            }
+
+            const createdAt = normalizeIsoDate(raw.createdAt, context.nowIso);
+            const updatedAt = normalizeIsoDate(raw.updatedAt, createdAt);
+            if (createdAt !== raw.createdAt || updatedAt !== raw.updatedAt) changed = true;
+
+            return {
+                value: { id, title: clippedTitle, category, content, tags, createdAt, updatedAt },
+                changed,
+                contentTruncated
+            };
+        }
+
+        function normalizeState(rawCategories, rawPrompts) {
+            const nowIso = new Date().toISOString();
+            const warnings = [];
+            let changed = false;
+            let rejectedCategories = 0;
+            let rejectedPrompts = 0;
+            let truncatedPrompts = 0;
+
+            const sourceCategories = Array.isArray(rawCategories) ? rawCategories : [];
+            const sourcePrompts = Array.isArray(rawPrompts) ? rawPrompts : [];
+
+            if (sourceCategories.length > CONFIG.MAX_CATEGORIES) {
+                warnings.push(`Es werden nur die ersten ${CONFIG.MAX_CATEGORIES} Kategorien übernommen.`);
+                changed = true;
+            }
+            if (sourcePrompts.length > CONFIG.MAX_PROMPTS) {
+                warnings.push(`Es werden nur die ersten ${CONFIG.MAX_PROMPTS} Prompts übernommen.`);
+                changed = true;
+            }
+
+            const categories = [];
+            const categoryIds = new Set();
+            const idMap = new Map();
+
+            sourceCategories.slice(0, CONFIG.MAX_CATEGORIES).forEach((raw) => {
+                const category = normalizeCategory(raw);
+                if (!category) {
+                    rejectedCategories += 1;
+                    changed = true;
+                    return;
+                }
+                if (categoryIds.has(category.id)) {
+                    if (category.originalId) idMap.set(category.originalId, category.id);
+                    changed = true;
+                    return;
+                }
+                if (category.originalId) idMap.set(category.originalId, category.id);
+                if (category.changed) changed = true;
+                categoryIds.add(category.id);
+                categories.push({ id: category.id, name: category.name, icon: category.icon });
+            });
+
+            if (categories.length === 0) {
+                categories.push(...CONFIG.DEFAULT_CATEGORIES.map((category) => ({ ...category })));
+                changed = true;
+            }
+
+            const fallbackCategory = categories[0].id;
+            const prompts = [];
+            const promptIds = new Set();
+
+            sourcePrompts.slice(0, CONFIG.MAX_PROMPTS).forEach((raw) => {
+                const prompt = normalizePrompt(raw, { idMap, categoryIds, fallbackCategory, nowIso });
+                if (!prompt) {
+                    rejectedPrompts += 1;
+                    changed = true;
+                    return;
+                }
+                if (promptIds.has(prompt.value.id)) {
+                    prompt.value.id = createId('prompt');
+                    changed = true;
+                }
+                if (prompt.contentTruncated) truncatedPrompts += 1;
+                if (prompt.changed) changed = true;
+                promptIds.add(prompt.value.id);
+                prompts.push(prompt.value);
+            });
+
+            return {
+                categories,
+                prompts,
+                changed,
+                warnings,
+                rejectedCategories,
+                rejectedPrompts,
+                truncatedPrompts
+            };
+        }
+
+        function validateData() {
+            const normalized = normalizeState(appState.categories, appState.prompts);
+            appState.categories = normalized.categories;
+            appState.prompts = normalized.prompts;
+
+            if (appState.currentCategory !== 'all' &&
+                !appState.categories.some((category) => category.id === appState.currentCategory)) {
+                appState.currentCategory = 'all';
+            }
+
+            return normalized;
+        }
+
+        // ============================================================================
+        // LOCALSTORAGE
+        // ============================================================================
+
+        function loadData() {
+            let storedCategories = null;
+            let storedPrompts = null;
+            let readError = false;
+
+            try {
+                const rawCategories = localStorage.getItem(CONFIG.STORAGE_KEYS.CATEGORIES);
+                const rawPrompts = localStorage.getItem(CONFIG.STORAGE_KEYS.PROMPTS);
+                if (rawCategories) storedCategories = JSON.parse(rawCategories);
+                if (rawPrompts) storedPrompts = JSON.parse(rawPrompts);
+            } catch (error) {
+                readError = true;
+                console.error('Lokale Daten konnten nicht gelesen werden:', error);
+            }
+
+            if (readError) {
+                appState.categories = CONFIG.DEFAULT_CATEGORIES.map((category) => ({ ...category }));
+                appState.prompts = [];
+                showNotification('Lokale Daten sind beschädigt. Bitte ein Backup importieren.', true);
+                return;
+            }
+
+            const normalized = normalizeState(storedCategories, storedPrompts);
+            appState.categories = normalized.categories;
+            appState.prompts = normalized.prompts;
+
+            if (normalized.changed) {
+                saveData({ markDirty: false });
+            }
+            if (normalized.warnings.length > 0) {
+                console.warn('Daten normalisiert:', normalized.warnings.join(' '));
+            }
+        }
+
+        function saveData(options = {}) {
+            const markDirty = options.markDirty !== false;
+            try {
+                localStorage.setItem(CONFIG.STORAGE_KEYS.CATEGORIES, JSON.stringify(appState.categories));
+                localStorage.setItem(CONFIG.STORAGE_KEYS.PROMPTS, JSON.stringify(appState.prompts));
+                appState.lastSavedAt = new Date();
+                if (markDirty) {
+                    appState.dirtySinceExport = true;
+                    appState.saveRevision += 1;
+                }
+                scheduleDataFileWrite();
+                updateStorageStatus();
+            } catch (error) {
+                console.error('Fehler beim Speichern:', error);
+                showNotification('Fehler beim Speichern. Ist der Browser-Speicher voll?', true);
+            }
+        }
+
+        // ============================================================================
+        // DATEI-BACKUP (File System Access API, mit sicherem Fallback)
+        // ============================================================================
+
+        function isFileBackupSupported() {
+            return typeof window.showSaveFilePicker === 'function';
+        }
+
+        function openBackupDatabase() {
+            return new Promise((resolve, reject) => {
+                if (typeof indexedDB === 'undefined') {
+                    reject(new Error('IndexedDB ist nicht verfügbar.'));
+                    return;
+                }
+                const request = indexedDB.open('promptManagerBackup', 1);
+                request.onupgradeneeded = () => {
+                    if (!request.result.objectStoreNames.contains('handles')) {
+                        request.result.createObjectStore('handles');
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error || new Error('IndexedDB-Fehler.'));
+            });
+        }
+
+        async function storeFileHandle(handle) {
+            try {
+                const database = await openBackupDatabase();
+                await new Promise((resolve, reject) => {
+                    const transaction = database.transaction('handles', 'readwrite');
+                    transaction.objectStore('handles').put(handle, 'dataFile');
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = () => reject(transaction.error);
+                });
+                database.close();
+            } catch (error) {
+                console.warn('Datei-Handle konnte nicht gespeichert werden:', error);
+            }
+        }
+
+        async function loadFileHandle() {
+            try {
+                const database = await openBackupDatabase();
+                const handle = await new Promise((resolve, reject) => {
+                    const transaction = database.transaction('handles', 'readonly');
+                    const request = transaction.objectStore('handles').get('dataFile');
+                    request.onsuccess = () => resolve(request.result || null);
+                    request.onerror = () => reject(request.error);
+                });
+                database.close();
+                return handle;
+            } catch (error) {
+                return null;
+            }
+        }
+
+        async function readDataFile(handle) {
+            const file = await handle.getFile();
+            if (file.size === 0) {
+                return {
+                    ok: true,
+                    empty: true,
+                    version: CONFIG.EXPORT_VERSION,
+                    categories: [],
+                    prompts: [],
+                    warnings: [],
+                    errors: []
+                };
+            }
+            if (file.size > CONFIG.MAX_IMPORT_BYTES) {
+                return {
+                    ok: false,
+                    empty: false,
+                    errors: [`Die Datei ist größer als ${Math.round(CONFIG.MAX_IMPORT_BYTES / 1024 / 1024)} MB.`],
+                    warnings: [],
+                    categories: [],
+                    prompts: []
+                };
+            }
+            return decodeBackup(await file.text());
+        }
+
+        function encodeBackup() {
+            return JSON.stringify({
+                version: CONFIG.EXPORT_VERSION,
+                exportDate: new Date().toISOString(),
+                categories: appState.categories,
+                prompts: appState.prompts
+            }, null, 2);
+        }
+
+        function storageStatusText() {
+            if (fileBackup.status === 'active') {
+                const time = fileBackup.lastWriteAt
+                    ? fileBackup.lastWriteAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+                    : '—';
+                return `Datei-Backup aktiv · ${time}`;
+            }
+            if (fileBackup.status === 'permission') return 'Datei-Backup: Zugriff bestätigen';
+            if (fileBackup.status === 'available') return 'Datei-Backup gefunden · fortsetzen';
+            if (fileBackup.status === 'error') return 'Datei-Backup fehlgeschlagen';
+            if (!isFileBackupSupported()) return 'Nur Browser-Speicher · kein Datei-Backup im Browser';
+            return 'Nur Browser-Speicher · nicht dauerhaft';
+        }
+
+        function updateStorageStatus() {
+            const status = document.getElementById('storageStatus');
+            if (status) {
+                status.textContent = storageStatusText();
+                status.dataset.state = fileBackup.status;
+                status.title = 'Browser-Speicher kann beim Löschen der Website-Daten verschwinden. '
+                    + 'Ein Datei-Backup bleibt erhalten.';
+            }
+
+            const banner = document.getElementById('storageBanner');
+            if (banner) {
+                banner.hidden = appState.bannerDismissed || fileBackup.status === 'active';
+            }
+
+            const button = document.getElementById('connectFileBtn');
+            if (button) {
+                if (fileBackup.status === 'active') {
+                    button.textContent = '💾 Backup jetzt schreiben';
+                } else if (fileBackup.handle) {
+                    button.textContent = '📁 Backup fortsetzen';
+                } else {
+                    button.textContent = '📁 Backup-Datei';
+                }
+            }
+        }
+
+        function dismissStorageBanner() {
+            appState.bannerDismissed = true;
+            updateStorageStatus();
+        }
+
+        function applyRestoredData(decoded) {
+            if (!decoded || !decoded.ok) return { categoriesAdded: 0, promptsAdded: 0, promptsSkipped: 0 };
+            const stats = mergeImportedData(decoded.categories || [], decoded.prompts || []);
+            validateData();
+            renderCategories();
+            renderPrompts();
+            return stats;
+        }
+
+        async function writeDataFile(options = {}) {
+            const force = options.force === true;
+            if (!fileBackup.handle) return false;
+            if (!force && fileBackup.status !== 'active') return false;
+
+            try {
+                if (typeof fileBackup.handle.queryPermission === 'function') {
+                    const permission = await fileBackup.handle.queryPermission({ mode: 'readwrite' });
+                    if (permission !== 'granted') {
+                        fileBackup.status = 'permission';
+                        updateStorageStatus();
+                        return false;
+                    }
+                }
+
+                const revision = appState.saveRevision;
+                const writable = await fileBackup.handle.createWritable();
+                await writable.write(encodeBackup());
+                await writable.close();
+
+                fileBackup.status = 'active';
+                fileBackup.lastWriteAt = new Date();
+                fileBackup.lastError = null;
+                if (revision === appState.saveRevision) {
+                    appState.dirtySinceExport = false;
+                } else {
+                    // Während des Schreibens kam eine Änderung hinzu: erneut schreiben.
+                    scheduleDataFileWrite();
+                }
+                updateStorageStatus();
+                return true;
+            } catch (error) {
+                console.error('Datei-Backup fehlgeschlagen:', error);
+                fileBackup.status = 'error';
+                fileBackup.lastError = error;
+                updateStorageStatus();
+                showNotification('Datei-Backup fehlgeschlagen. Bitte erneut verbinden.', true);
+                return false;
+            }
+        }
+
+        function scheduleDataFileWrite() {
+            if (fileBackup.status !== 'active') return;
+            clearTimeout(fileBackup.timer);
+            fileBackup.timer = setTimeout(() => {
+                fileBackup.timer = null;
+                void writeDataFile();
+            }, 700);
+        }
+
+        async function connectDataFile() {
+            if (!isFileBackupSupported()) {
+                showNotification('Dieser Browser unterstützt kein Datei-Backup. Bitte JSON exportieren und importieren.', true);
+                return;
+            }
+
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: CONFIG.BACKUP_FILE_NAME,
+                    types: [{
+                        description: 'JSON-Backup',
+                        accept: { 'application/json': ['.json'] }
+                    }]
+                });
+
+                let decoded;
+                try {
+                    decoded = await readDataFile(handle);
+                } catch (error) {
+                    console.error('Backup-Datei konnte nicht gelesen werden:', error);
+                    showNotification('Die gewählte Datei konnte nicht gelesen werden. Es wurde nichts überschrieben.', true);
+                    return;
+                }
+
+                if (!decoded.ok) {
+                    showNotification(`Die Datei ist kein gültiges Backup: ${decoded.errors[0] || 'unbekannter Fehler'}`, true);
+                    return;
+                }
+
+                fileBackup.handle = handle;
+                fileBackup.status = 'active';
+
+                let stats = { categoriesAdded: 0, promptsAdded: 0, promptsSkipped: 0 };
+                if (!decoded.empty && (decoded.prompts.length > 0 || decoded.categories.length > 0)) {
+                    stats = applyRestoredData(decoded);
+                }
+
+                const written = await writeDataFile({ force: true });
+                if (!written) return;
+
+                await storeFileHandle(handle);
+                appState.bannerDismissed = true;
+                updateStorageStatus();
+                showNotification(
+                    `Backup-Datei verbunden. ${stats.promptsAdded} Prompts aus der Datei übernommen, `
+                    + 'Änderungen werden automatisch gespeichert.'
+                );
+            } catch (error) {
+                if (error && error.name === 'AbortError') return;
+                console.error('Datei-Backup konnte nicht verbunden werden:', error);
+                showNotification('Datei-Backup konnte nicht verbunden werden.', true);
+            }
+        }
+
+        async function resumeDataFile() {
+            const handle = fileBackup.handle || await loadFileHandle();
+            if (!handle) {
+                await connectDataFile();
+                return;
+            }
+
+            try {
+                const permission = typeof handle.requestPermission === 'function'
+                    ? await handle.requestPermission({ mode: 'readwrite' })
+                    : 'granted';
+                if (permission !== 'granted') {
+                    showNotification('Zugriff auf die Backup-Datei wurde nicht erlaubt.', true);
+                    return;
+                }
+
+                const decoded = await readDataFile(handle);
+                if (!decoded.ok) {
+                    showNotification(`Die Backup-Datei ist ungültig: ${decoded.errors[0] || 'unbekannter Fehler'}`, true);
+                    return;
+                }
+
+                fileBackup.handle = handle;
+                fileBackup.status = 'active';
+
+                let stats = { categoriesAdded: 0, promptsAdded: 0, promptsSkipped: 0 };
+                if (!decoded.empty && (decoded.prompts.length > 0 || decoded.categories.length > 0)) {
+                    stats = applyRestoredData(decoded);
+                }
+
+                const written = await writeDataFile({ force: true });
+                if (!written) return;
+
+                await storeFileHandle(handle);
+                appState.bannerDismissed = true;
+                updateStorageStatus();
+                showNotification(
+                    `Backup wiederhergestellt: ${stats.promptsAdded} neue Prompts, `
+                    + `${stats.promptsSkipped} Doppelungen übersprungen.`
+                );
+            } catch (error) {
+                if (error && error.name === 'AbortError') return;
+                console.error('Backup konnte nicht fortgesetzt werden:', error);
+                showNotification('Backup konnte nicht fortgesetzt werden.', true);
+            }
+        }
+
+        function handleBackupButton() {
+            if (!isFileBackupSupported()) {
+                showNotification('Dieser Browser unterstützt kein Datei-Backup. Bitte JSON exportieren und importieren.', true);
+                return;
+            }
+            if (fileBackup.status === 'active') {
+                void writeDataFile({ force: true }).then((ok) => {
+                    if (ok) showNotification('Backup-Datei aktualisiert.');
+                });
+                return;
+            }
+            if (fileBackup.handle) {
+                void resumeDataFile();
+            } else {
+                void connectDataFile();
+            }
+        }
+
+        async function restoreFileHandle() {
+            if (!isFileBackupSupported()) {
+                updateStorageStatus();
+                return;
+            }
+            const handle = await loadFileHandle();
+            if (handle) {
+                fileBackup.handle = handle;
+                if (fileBackup.status === 'none') fileBackup.status = 'available';
+            }
+            updateStorageStatus();
+        }
+
+        // ============================================================================
+        // IMPORT / EXPORT
+        // ============================================================================
+
+        function validateImportedData(raw) {
+            const result = {
+                ok: false,
+                errors: [],
+                warnings: [],
+                version: null,
+                categories: [],
+                prompts: [],
+                rejectedCategories: 0,
+                rejectedPrompts: 0,
+                truncatedPrompts: 0,
+                upgradedFrom: null
+            };
+
+            if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+                result.errors.push('Die Datei enthält kein JSON-Objekt.');
+                return result;
+            }
+
+            const version = raw.version == null ? null : String(raw.version).trim().slice(0, 20);
+            result.version = version;
+            if (version && !/^[12](?:\.\d+)?$/.test(version)) {
+                result.errors.push(`Nicht unterstützte Export-Version: ${version}`);
+                return result;
+            }
+
+            if (!Array.isArray(raw.categories)) {
+                result.errors.push('Feld "categories" fehlt oder ist kein Array.');
+                return result;
+            }
+            if (!Array.isArray(raw.prompts)) {
+                result.errors.push('Feld "prompts" fehlt oder ist kein Array.');
+                return result;
+            }
+            if (raw.categories.length > CONFIG.MAX_CATEGORIES) {
+                result.errors.push(`Zu viele Kategorien (max. ${CONFIG.MAX_CATEGORIES}).`);
+                return result;
+            }
+            if (raw.prompts.length > CONFIG.MAX_PROMPTS) {
+                result.errors.push(`Zu viele Prompts (max. ${CONFIG.MAX_PROMPTS}).`);
+                return result;
+            }
+
+            const normalized = normalizeState(raw.categories, raw.prompts);
+            result.categories = normalized.categories;
+            result.prompts = normalized.prompts;
+            result.rejectedCategories = normalized.rejectedCategories;
+            result.rejectedPrompts = normalized.rejectedPrompts;
+            result.truncatedPrompts = normalized.truncatedPrompts;
+            result.warnings = normalized.warnings.slice();
+            result.upgradedFrom = version === CONFIG.EXPORT_VERSION ? null : (version || 'ohne Versionsangabe');
+
+            if (normalized.rejectedCategories > 0) {
+                result.warnings.push(`${normalized.rejectedCategories} Kategorie(n) ohne gültigen Namen wurden übersprungen.`);
+            }
+            if (normalized.rejectedPrompts > 0) {
+                result.warnings.push(`${normalized.rejectedPrompts} Prompt(s) ohne gültigen Titel wurden übersprungen.`);
+            }
+            if (normalized.truncatedPrompts > 0) {
+                result.warnings.push(`${normalized.truncatedPrompts} Prompt(s) wurden auf ${CONFIG.MAX_CONTENT_LENGTH} Zeichen gekürzt.`);
+            }
+
+            result.ok = true;
+            return result;
+        }
+
+        function decodeBackup(text) {
+            const empty = { ok: false, errors: [], warnings: [], categories: [], prompts: [] };
+            if (typeof text !== 'string' || !text.trim()) {
+                empty.errors.push('Die Datei ist leer.');
+                return empty;
+            }
+            let raw;
+            try {
+                raw = JSON.parse(text);
+            } catch (error) {
+                empty.errors.push('Die Datei ist kein gültiges JSON.');
+                return empty;
+            }
+            return validateImportedData(raw);
+        }
+
         /**
-         * Führt importierte Kategorien und Prompts mit dem Bestand zusammen.
-         *
-         * GEÄNDERT: Der Import überschreibt nichts mehr. Bestehende Kategorien
-         * und Prompts bleiben unverändert, neue kommen hinzu. Doppelungen
-         * werden erkannt und übersprungen:
-         * - Kategorien: gleiche ID oder gleicher Name (Groß-/Kleinschreibung egal)
-         * - Prompts:    gleiche ID oder gleicher Titel + gleicher Inhalt
-         *
-         * Rückgabe: Statistik der durchgeführten Änderungen
+         * Führt bereits normalisierte Importdaten mit dem Bestand zusammen.
+         * Es wird nie etwas überschrieben: gleiche IDs oder identische Titel+Inhalt
+         * werden übersprungen, ID-Kollisionen mit anderem Inhalt werden neu vergeben.
          */
         function mergeImportedData(importedCategories, importedPrompts) {
             const stats = {
                 categoriesAdded: 0,
                 categoriesMapped: 0,
                 promptsAdded: 0,
-                promptsSkipped: 0
+                promptsSkipped: 0,
+                promptsReidentified: 0
             };
 
-            // ---- Kategorien zusammenführen --------------------------------
-            const categoryById = new Map(appState.categories.map(cat => [cat.id, cat]));
-            const categoryByName = new Map(
-                appState.categories.map(cat => [String(cat.name || '').toLowerCase(), cat])
-            );
+            // Ein Bestand ohne Kategorien würde jedes Ziel ins Leere zeigen.
+            if (!Array.isArray(appState.categories) || appState.categories.length === 0) {
+                appState.categories = CONFIG.DEFAULT_CATEGORIES.map((category) => ({ ...category }));
+            }
 
-            // Ordnet importierten Kategorie-IDs die bestehende Ziel-Kategorie zu
+            const categoryById = new Map(appState.categories.map((category) => [category.id, category]));
+            const categoryByName = new Map(
+                appState.categories.map((category) => [String(category.name || '').toLowerCase(), category])
+            );
             const categoryTarget = new Map();
 
-            importedCategories.forEach(importedCategory => {
+            (importedCategories || []).forEach((importedCategory) => {
                 if (!importedCategory || !importedCategory.id || !importedCategory.name) return;
 
-                // Bereinigte Struktur sicherstellen
-                const wanted = {
-                    id: String(importedCategory.id),
+                const existingById = categoryById.get(importedCategory.id);
+                if (existingById) {
+                    categoryTarget.set(importedCategory.id, existingById);
+                    return;
+                }
+
+                const existingByName = categoryByName.get(String(importedCategory.name).toLowerCase());
+                if (existingByName) {
+                    categoryTarget.set(importedCategory.id, existingByName);
+                    stats.categoriesMapped += 1;
+                    return;
+                }
+
+                if (appState.categories.length >= CONFIG.MAX_CATEGORIES) {
+                    categoryTarget.set(importedCategory.id, appState.categories[0]);
+                    return;
+                }
+
+                const newCategory = {
+                    id: importedCategory.id,
                     name: String(importedCategory.name),
                     icon: importedCategory.icon || '📁'
                 };
-
-                // Fall 1: Kategorie mit gleicher ID existiert -> unverändert lassen
-                const existingById = categoryById.get(wanted.id);
-                if (existingById) {
-                    categoryTarget.set(wanted.id, existingById);
-                    return;
-                }
-
-                // Fall 2: Kategorie mit gleichem Namen existiert -> bestehende
-                // Kategorie behalten, importierte Prompts später darauf ummappen
-                const existingByName = categoryByName.get(wanted.name.toLowerCase());
-                if (existingByName) {
-                    categoryTarget.set(wanted.id, existingByName);
-                    stats.categoriesMapped++;
-                    return;
-                }
-
-                // Fall 3: Neue Kategorie -> hinzufügen
-                appState.categories.push(wanted);
-                categoryById.set(wanted.id, wanted);
-                categoryByName.set(wanted.name.toLowerCase(), wanted);
-                categoryTarget.set(wanted.id, wanted);
-                stats.categoriesAdded++;
+                appState.categories.push(newCategory);
+                categoryById.set(newCategory.id, newCategory);
+                categoryByName.set(newCategory.name.toLowerCase(), newCategory);
+                categoryTarget.set(importedCategory.id, newCategory);
+                stats.categoriesAdded += 1;
             });
 
-            // ---- Prompts zusammenführen -----------------------------------
-            const existingIds = new Set(appState.prompts.map(p => p.id));
+            const existingIds = new Set(appState.prompts.map((prompt) => prompt.id));
             const existingFingerprints = new Set(
-                appState.prompts.map(p => promptFingerprint(p.title, p.content))
+                appState.prompts.map((prompt) => promptFingerprint(prompt.title, prompt.content))
             );
 
-            importedPrompts.forEach(importedPrompt => {
-                if (!importedPrompt || !importedPrompt.id || !importedPrompt.title) return;
+            (importedPrompts || []).forEach((importedPrompt) => {
+                if (!importedPrompt || !importedPrompt.title) return;
+
+                const targetCategory = categoryTarget.get(importedPrompt.category)
+                    || categoryById.get(importedPrompt.category)
+                    || appState.categories[0];
 
                 const promptData = {
-                    id: String(importedPrompt.id),
-                    title: String(importedPrompt.title).substring(0, CONFIG.MAX_TITLE_LENGTH),
-                    category: importedPrompt.category,
-                    content: String(importedPrompt.content || ''),
-                    tags: Array.isArray(importedPrompt.tags) ? importedPrompt.tags.map(String) : [],
-                    createdAt: importedPrompt.createdAt || new Date().toISOString(),
-                    updatedAt: importedPrompt.updatedAt || importedPrompt.createdAt || new Date().toISOString()
+                    id: String(importedPrompt.id || createId('prompt')),
+                    title: String(importedPrompt.title).slice(0, CONFIG.MAX_TITLE_LENGTH),
+                    category: targetCategory ? targetCategory.id : appState.categories[0].id,
+                    content: String(importedPrompt.content ?? '').slice(0, CONFIG.MAX_CONTENT_LENGTH),
+                    tags: normalizeTags(importedPrompt.tags),
+                    createdAt: normalizeIsoDate(importedPrompt.createdAt, new Date().toISOString()),
+                    updatedAt: normalizeIsoDate(importedPrompt.updatedAt, new Date().toISOString())
                 };
 
-                // Kategorie-Mapping anwenden (z. B. bei Namens-Gleichheit)
-                promptData.category = categoryTarget.get(promptData.category)?.id || promptData.category;
+                const fingerprint = promptFingerprint(promptData.title, promptData.content);
 
-                // Doppelung: gleiche ID oder identischer Titel + Inhalt
-                if (existingIds.has(promptData.id) ||
-                    existingFingerprints.has(promptFingerprint(promptData.title, promptData.content))) {
-                    stats.promptsSkipped++;
+                if (existingIds.has(promptData.id)) {
+                    if (existingFingerprints.has(fingerprint)) {
+                        stats.promptsSkipped += 1;
+                        return;
+                    }
+                    promptData.id = createId('prompt');
+                    stats.promptsReidentified += 1;
+                } else if (existingFingerprints.has(fingerprint)) {
+                    stats.promptsSkipped += 1;
+                    return;
+                }
+
+                if (appState.prompts.length >= CONFIG.MAX_PROMPTS) {
+                    stats.promptsSkipped += 1;
                     return;
                 }
 
                 appState.prompts.push(promptData);
                 existingIds.add(promptData.id);
-                existingFingerprints.add(promptFingerprint(promptData.title, promptData.content));
-                stats.promptsAdded++;
+                existingFingerprints.add(fingerprint);
+                stats.promptsAdded += 1;
             });
 
             return stats;
         }
 
-        /**
-         * Importiert Daten aus JSON-Datei.
-         * GEÄNDERT: Der Bestand bleibt erhalten; neue Kategorien und Prompts
-         * werden ergänzt, Doppelungen werden automatisch übersprungen.
-         */
         function importData() {
             const input = document.createElement('input');
             input.type = 'file';
-            input.accept = '.json';
+            input.accept = '.json,application/json';
             input.style.display = 'none';
 
-            input.onchange = function(e) {
-                const file = e.target.files[0];
+            input.onchange = async (event) => {
+                const file = event.target.files && event.target.files[0];
+                input.remove();
                 if (!file) return;
 
-                const reader = new FileReader();
-                
-                reader.onload = function(event) {
-                    try {
-                        const data = JSON.parse(event.target.result);
-                        
-                        // Validierung der Dateistruktur
-                        if (!data.categories || !Array.isArray(data.categories) || 
-                            !data.prompts || !Array.isArray(data.prompts)) {
-                            throw new Error('Ungültige Dateistruktur');
-                        }
+                if (file.size > CONFIG.MAX_IMPORT_BYTES) {
+                    showNotification(`Datei zu groß (max. ${Math.round(CONFIG.MAX_IMPORT_BYTES / 1024 / 1024)} MB).`, true);
+                    return;
+                }
 
-                        const confirmMsg = `Möchtest du ${data.prompts.length} Prompts und ${data.categories.length} Kategorien importieren? Deine bestehenden Daten bleiben dabei erhalten – bereits vorhandene Einträge werden nicht doppelt angelegt.`;
-                        
-                        if (confirm(confirmMsg)) {
-                            appState.currentCategory = 'all';
+                let text;
+                try {
+                    text = await file.text();
+                } catch (error) {
+                    console.error('Datei konnte nicht gelesen werden:', error);
+                    showNotification('Datei konnte nicht gelesen werden.', true);
+                    return;
+                }
 
-                            // Zusammenführen statt Überschreiben
-                            const stats = mergeImportedData(data.categories, data.prompts);
+                const decoded = decodeBackup(text);
+                if (!decoded.ok) {
+                    showNotification(`Import nicht möglich: ${decoded.errors[0]}`, true);
+                    return;
+                }
 
-                            validateData();
-                            saveData();
-                            
-                            renderCategories();
-                            renderPrompts();
-                            
-                            showNotification(`Import: ${stats.categoriesAdded} neue Kategorien, ${stats.promptsAdded} neue Prompts, ${stats.promptsSkipped} Doppelungen übersprungen`);
-                        }
-                        
-                    } catch (err) {
-                        console.error('❌ Import-Fehler:', err);
-                        showNotification('Fehler: ' + err.message, true);
-                    }
-                };
-                
-                reader.readAsText(file);
+                const warningText = decoded.warnings.length > 0
+                    ? `\n\nHinweise:\n- ${decoded.warnings.join('\n- ')}`
+                    : '';
+                const confirmMessage = `Möchtest du ${decoded.prompts.length} Prompts und `
+                    + `${decoded.categories.length} Kategorien importieren? Deine bestehenden Daten bleiben erhalten, `
+                    + `Doppelungen werden übersprungen.${warningText}`;
+
+                if (!confirm(confirmMessage)) return;
+
+                appState.currentCategory = 'all';
+                const stats = mergeImportedData(decoded.categories, decoded.prompts);
+                validateData();
+                saveData();
+
+                renderCategories();
+                renderPrompts();
+
+                const parts = [
+                    `${stats.categoriesAdded} neue Kategorien`,
+                    `${stats.promptsAdded} neue Prompts`,
+                    `${stats.promptsSkipped} Doppelungen übersprungen`
+                ];
+                if (stats.promptsReidentified > 0) {
+                    parts.push(`${stats.promptsReidentified} ID-Kollisionen neu vergeben`);
+                }
+                showNotification(`Import: ${parts.join(', ')}.`);
             };
-            
+
             document.body.appendChild(input);
             input.click();
-            document.body.removeChild(input);
+            // Nicht sofort entfernen: Manche Browser brechen den Dateidialog ab,
+            // wenn das Eingabeelement aus dem DOM verschwindet.
+            setTimeout(() => input.remove(), 60000);
+        }
+
+        function exportData() {
+            try {
+                const blob = new Blob([encodeBackup()], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `prompt-manager-backup-${stamp}.json`;
+                link.style.display = 'none';
+
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 0);
+
+                appState.dirtySinceExport = false;
+                appState.lastExportAt = new Date();
+                updateStorageStatus();
+                showNotification('Backup exportiert.');
+            } catch (error) {
+                console.error('Export-Fehler:', error);
+                showNotification('Fehler beim Exportieren.', true);
+            }
         }
 
         // ============================================================================
-        // MARKDOWN-RENDERING UND LIVE-VORSCHAU
+        // MARKDOWN-RENDERER (lokal, ohne externe Abhängigkeiten)
         // ============================================================================
 
-        /**
-         * Markdown wird ausschließlich lokal gerendert — es werden keine
-         * externen Skripte aus dem Internet nachgeladen. Der eingebaute
-         * Renderer deckt die für Prompts und Chatverläufe relevanten
-         * Auszeichnungen ab (Überschriften, Listen inkl. Verschachtelung,
-         * Task-Listen, Tabellen, Code, Zitate, Fett/Kursiv, Bilder, Links)
-         * und erzeugt ausschließlich escapte, XSS-sichere Ausgabe.
-         */
+        function formatEmphasis(text) {
+            return text
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>')
+                .replace(/(?<![\w*])_([^_\n]+)_(?![\w*])/g, '<em>$1</em>')
+                .replace(/~~([^~]+)~~/g, '<del>$1</del>');
+        }
 
-        /**
-         * Lokaler Markdown-Renderer (keine externen Requests, offline-fähig).
-         * Erzeugt ausschließlich escapte HTML-Ausgabe (XSS-sicher).
-         * Unterstützt: Überschriften, Listen (auch verschachtelt), Task-Listen,
-         * GFM-Tabellen (mit Ausrichtung), Blockquotes, Code-Blöcke,
-         * Inline-Code, Fett/Kursiv/Durchgestrichen, Bilder, Links, Trennlinien.
-         */
+        function renderLink(label, url) {
+            const safe = sanitizeUrl(url);
+            if (!safe) {
+                return `<span class="blocked-link">${label} (Link blockiert)</span>`;
+            }
+            return `<a href="${safe}" target="_blank" rel="noopener noreferrer">${formatEmphasis(label)}</a>`;
+        }
+
+        function renderImage(alt, url) {
+            const safe = sanitizeUrl(url, { allowImageData: true });
+            if (safe && /^data:image\//i.test(safe)) {
+                return `<img src="${safe}" alt="${alt}" loading="lazy">`;
+            }
+
+            const link = sanitizeUrl(url);
+            const label = alt || 'Bild';
+            if (!link) {
+                return `<span class="blocked-link">${label} (Bild blockiert)</span>`;
+            }
+            const hint = /^https?:/i.test(link) ? '(extern, nicht geladen)' : '(nicht geladen)';
+            return `<a href="${link}" target="_blank" rel="noopener noreferrer">🖼 ${label} `
+                + `<span class="external-hint">${hint}</span></a>`;
+        }
+
+        function renderInline(text) {
+            const stash = [];
+            const put = (html) => {
+                stash.push(html);
+                return `\uE000${stash.length - 1}\uE000`;
+            };
+
+            let out = escapeHtml(text);
+
+            // Inline-Code zuerst isolieren, damit Emphase-Zeichen darin literal bleiben.
+            out = out.replace(/`([^`]+)`/g, (match, code) => put(`<code>${code}</code>`));
+
+            // Bilder vor Links, sonst würde das Link-Muster den Bild-Teil erfassen.
+            out = out.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (match, alt, url) =>
+                put(renderImage(alt.replace(/\uE000\d+\uE000/g, ''), url))
+            );
+            out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (match, label, url) => put(renderLink(label, url)));
+
+            out = out.replace(/(^|[\s(])(https?:\/\/[^\s<]+[^\s<.,;:!?)])/g, (match, prefix, url) => {
+                const safe = sanitizeUrl(url);
+                if (!safe) return match;
+                return `${prefix}${put(`<a href="${safe}" target="_blank" rel="noopener noreferrer">${url}</a>`)}`;
+            });
+
+            out = formatEmphasis(out);
+            out = out.replace(/\uE000(\d+)\uE000/g, (match, index) => stash[Number(index)] ?? '');
+            return out;
+        }
+
         function renderMarkdown(text) {
             const lines = String(text ?? '').split(/\r?\n/);
             let html = '';
             let inCode = false;
             let codeBuffer = [];
-            const listStack = []; // { type: 'ul'|'ol', indent: number, liOpen: boolean }
+            const listStack = [];
 
             const closeOneList = () => {
                 const list = listStack.pop();
-                if (list.liOpen) {
-                    html += '</li>';
-                }
+                if (list.liOpen) html += '</li>';
                 html += `</${list.type}>`;
             };
 
             const closeAllLists = () => {
-                while (listStack.length > 0) {
-                    closeOneList();
-                }
+                while (listStack.length > 0) closeOneList();
             };
 
             const openLi = (content, cssClass) => {
-                // <li> bleibt bewusst offen, damit verschachtelte Listen
-                // innerhalb des Elements landen (valides HTML)
                 html += `<li${cssClass ? ` class="${cssClass}"` : ''}>${content}`;
                 listStack[listStack.length - 1].liOpen = true;
             };
@@ -1799,7 +2156,6 @@
                     html += `<${type}>`;
                     listStack.push({ type, indent, liOpen: false });
                 } else if (indent > listStack[listStack.length - 1].indent) {
-                    // Tiefere Einrückung: verschachtelte Liste im offenen <li>
                     html += `<${type}>`;
                     listStack.push({ type, indent, liOpen: false });
                 } else {
@@ -1824,7 +2180,6 @@
                     }
                 }
 
-                // Task-Listen: "- [ ] offen" / "- [x] erledigt"
                 const taskMatch = content.match(/^\[([ xX])\]\s+(.*)$/);
                 if (taskMatch) {
                     const checked = taskMatch[1].toLowerCase() === 'x';
@@ -1839,38 +2194,14 @@
 
             const splitTableRow = (line) => {
                 let cells = line.trim();
-                if (cells.startsWith('|')) {
-                    cells = cells.slice(1);
-                }
-                if (cells.endsWith('|')) {
-                    cells = cells.slice(0, -1);
-                }
-                return cells.split('|').map(c => c.trim());
+                if (cells.startsWith('|')) cells = cells.slice(1);
+                if (cells.endsWith('|')) cells = cells.slice(0, -1);
+                return cells.split(/(?<!\\)\|/).map((cell) => cell.trim().replace(/\\\|/g, '|'));
             };
 
-            const renderInline = (s) => {
-                let out = escapeHtml(s);
-                out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
-                out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-                out = out.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
-                out = out.replace(/(?<![\w*])_([^_\n]+)_(?![\w*])/g, '<em>$1</em>');
-                out = out.replace(/~~([^~]+)~~/g, '<del>$1</del>');
-                out = out.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (m, alt, url) =>
-                    `<img src="${url.replace(/"/g, '%22')}" alt="${alt}" style="max-width: 100%;">`
-                );
-                out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, label, url) =>
-                    `<a href="${url.replace(/"/g, '%22')}" target="_blank" rel="noopener">${label}</a>`
-                );
-                out = out.replace(/(^|[\s(])(https?:\/\/[^\s<]+[^\s<.,;:!?)])/g, (m, pre, url) =>
-                    `${pre}<a href="${url}" target="_blank" rel="noopener">${url}</a>`
-                );
-                return out;
-            };
-
-            for (let i = 0; i < lines.length; i++) {
+            for (let i = 0; i < lines.length; i += 1) {
                 const rawLine = lines[i];
 
-                // Code-Blöcke (``` ... ```) vollständig escapen
                 if (inCode) {
                     if (/^\s*```/.test(rawLine)) {
                         html += `<pre><code>${escapeHtml(codeBuffer.join('\n'))}</code></pre>`;
@@ -1910,41 +2241,39 @@
                     continue;
                 }
 
-                // GFM-Tabellen: Kopfzeile mit "|", darunter Trennzeile "---|---"
                 if (trimmed.includes('|') && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
                     closeAllLists();
 
                     const headers = splitTableRow(trimmed);
-                    const aligns = splitTableRow(lines[i + 1]).map(sep => {
-                        if (/^:-+:$/.test(sep)) return 'center';
-                        if (/^:-+$/.test(sep)) return 'left';
-                        if (/^-+:$/.test(sep)) return 'right';
+                    const aligns = splitTableRow(lines[i + 1]).map((separator) => {
+                        if (/^:-+:$/.test(separator)) return 'center';
+                        if (/^:-+$/.test(separator)) return 'left';
+                        if (/^-+:$/.test(separator)) return 'right';
                         return '';
                     });
-                    const alignAttr = (idx) => (aligns[idx] ? ` style="text-align: ${aligns[idx]};"` : '');
+                    const alignAttr = (index) => (aligns[index] ? ` style="text-align: ${aligns[index]};"` : '');
 
                     html += '<table><thead><tr>';
-                    headers.forEach((cell, idx) => {
-                        html += `<th${alignAttr(idx)}>${renderInline(cell)}</th>`;
+                    headers.forEach((cell, index) => {
+                        html += `<th${alignAttr(index)}>${renderInline(cell)}</th>`;
                     });
                     html += '</tr></thead><tbody>';
 
-                    i += 2; // Kopf- und Trennzeile überspringen
+                    i += 2;
                     while (i < lines.length && lines[i].trim() && lines[i].includes('|')) {
                         const cells = splitTableRow(lines[i]);
                         html += '<tr>';
-                        headers.forEach((cell, idx) => {
-                            html += `<td${alignAttr(idx)}>${renderInline(cells[idx] ?? '')}</td>`;
+                        headers.forEach((cell, index) => {
+                            html += `<td${alignAttr(index)}>${renderInline(cells[index] ?? '')}</td>`;
                         });
                         html += '</tr>';
-                        i++;
+                        i += 1;
                     }
                     html += '</tbody></table>';
-                    i--; // äußere Schleife erhöht i erneut
+                    i -= 1;
                     continue;
                 }
 
-                // Listen mit Einrückungs-Verschachtelung
                 const bulletMatch = rawLine.match(/^(\s*)[-*+]\s+(.*)$/);
                 if (bulletMatch) {
                     const indent = bulletMatch[1].replace(/\t/g, '    ').length;
@@ -1970,7 +2299,6 @@
                 html += `<p>${renderInline(trimmed)}</p>`;
             }
 
-            // Offene Strukturen am Ende schließen
             if (inCode) {
                 html += `<pre><code>${escapeHtml(codeBuffer.join('\n'))}</code></pre>`;
             }
@@ -1979,221 +2307,845 @@
             return html;
         }
 
-        /**
-         * Vorschau-Ziele: Prompt-Formular und Chatverlauf-Einfügen-Modal
-         */
         const markdownPreviews = {
-            prompt: { textareaId: 'promptContent', previewId: 'markdownPreview', toggleId: 'previewToggle', visible: true },
-            chat: { textareaId: 'hfChatContent', previewId: 'chatMarkdownPreview', toggleId: 'chatPreviewToggle', visible: true }
+            prompt: { textareaId: 'promptContent', previewId: 'markdownPreview', toggleId: 'previewToggle' },
+            chat: { textareaId: 'hfChatContent', previewId: 'chatMarkdownPreview', toggleId: 'chatPreviewToggle' }
         };
 
-        /**
-         * Aktualisiert die Markdown-Vorschau des angegebenen Ziels
-         * (Standard: Prompt-Formular)
-         */
-        function updateMarkdownPreview(which) {
-            const cfg = markdownPreviews[which || 'prompt'];
-            if (!cfg || !cfg.visible) return;
+        function updateMarkdownPreview(which = 'prompt') {
+            const config = markdownPreviews[which];
+            if (!config) return;
 
-            const preview = document.getElementById(cfg.previewId);
-            const textarea = document.getElementById(cfg.textareaId);
+            const preview = document.getElementById(config.previewId);
+            const textarea = document.getElementById(config.textareaId);
             if (!preview || !textarea) return;
 
             preview.innerHTML = renderMarkdown(textarea.value);
         }
 
-        /**
-         * Blendet die Vorschau eines Ziels ein bzw. aus
-         */
-        function toggleMarkdownPreview(which) {
-            const cfg = markdownPreviews[which || 'prompt'];
-            if (!cfg) return;
+        function toggleMarkdownPreview(which = 'prompt') {
+            const config = markdownPreviews[which];
+            if (!config) return;
 
-            cfg.visible = !cfg.visible;
-
-            const preview = document.getElementById(cfg.previewId);
-            const button = document.getElementById(cfg.toggleId);
+            const preview = document.getElementById(config.previewId);
+            const button = document.getElementById(config.toggleId);
             if (!preview || !button) return;
 
-            preview.style.display = cfg.visible ? 'block' : 'none';
-            button.textContent = cfg.visible ? 'Vorschau ausblenden' : 'Vorschau anzeigen';
-            button.setAttribute('aria-pressed', String(cfg.visible));
-
-            if (cfg.visible) {
-                updateMarkdownPreview(which);
-            }
+            const isHidden = preview.hidden;
+            preview.hidden = !isHidden;
+            button.setAttribute('aria-pressed', String(isHidden));
+            button.textContent = isHidden ? 'Vorschau ausblenden' : 'Vorschau einblenden';
         }
 
         // ============================================================================
-        // MODAL-FUNKTIONEN - BARRIREFREI UND SICHER
+        // RENDER-FUNKTIONEN
         // ============================================================================
 
-        /**
-         * Öffnet ein Modal mit Barrierefreiheit
-         */
-        function openModal(modalId) {
+        function renderCategories() {
+            const container = document.getElementById('categoryList');
+            if (!container) return;
+
+            const fragment = document.createDocumentFragment();
+            fragment.appendChild(
+                createCategoryElement('all', '📊', 'Alle Prompts', appState.prompts.length, appState.currentCategory === 'all')
+            );
+
+            appState.categories.forEach((category) => {
+                const count = appState.prompts.filter((prompt) => prompt.category === category.id).length;
+                fragment.appendChild(
+                    createCategoryElement(category.id, category.icon, category.name, count, appState.currentCategory === category.id)
+                );
+            });
+
+            container.textContent = '';
+            container.appendChild(fragment);
+            updateCategoryDropdowns();
+        }
+
+        function createCategoryElement(id, icon, name, count, isActive) {
+            const element = document.createElement('div');
+            element.className = `category-item ${isActive ? 'active' : ''}`;
+            element.setAttribute('role', 'menuitem');
+            element.setAttribute('tabindex', '0');
+            element.setAttribute('aria-current', isActive ? 'page' : 'false');
+            element.addEventListener('click', () => selectCategory(id));
+            element.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    selectCategory(id);
+                }
+            });
+
+            const iconElement = document.createElement('span');
+            iconElement.className = 'category-icon';
+            iconElement.textContent = icon;
+
+            const nameElement = document.createElement('span');
+            nameElement.className = 'category-name';
+            nameElement.textContent = name;
+
+            const countElement = document.createElement('span');
+            countElement.className = 'category-count';
+            countElement.textContent = String(count);
+
+            element.append(iconElement, nameElement, countElement);
+            return element;
+        }
+
+        function updateCategoryDropdowns() {
+            ['promptCategory', 'hfImportCategory'].forEach((id) => {
+                const select = document.getElementById(id);
+                if (!select) return;
+
+                const currentValue = select.value;
+                select.textContent = '';
+
+                appState.categories.forEach((category) => {
+                    const option = document.createElement('option');
+                    option.value = category.id;
+                    option.textContent = `${category.icon} ${category.name}`;
+                    select.appendChild(option);
+                });
+
+                if (currentValue && appState.categories.some((category) => category.id === currentValue)) {
+                    select.value = currentValue;
+                }
+            });
+        }
+
+        function renderPrompts() {
+            const grid = document.getElementById('promptGrid');
+            const emptyState = document.getElementById('emptyState');
+            if (!grid || !emptyState) return;
+
+            const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
+
+            let filtered = appState.prompts;
+            if (appState.currentCategory !== 'all') {
+                filtered = filtered.filter((prompt) => prompt.category === appState.currentCategory);
+            }
+
+            if (searchTerm) {
+                filtered = filtered.filter((prompt) => {
+                    const tags = Array.isArray(prompt.tags) ? prompt.tags : [];
+                    return String(prompt.title).toLowerCase().includes(searchTerm)
+                        || String(prompt.content).toLowerCase().includes(searchTerm)
+                        || tags.some((tag) => String(tag).toLowerCase().includes(searchTerm));
+                });
+            }
+
+            // Kopie sortieren: appState bleibt in Eingabereihenfolge.
+            filtered = [...filtered].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+            if (filtered.length === 0) {
+                grid.textContent = '';
+                emptyState.hidden = false;
+                return;
+            }
+
+            emptyState.hidden = true;
+
+            const fragment = document.createDocumentFragment();
+            filtered.forEach((prompt) => {
+                const category = appState.categories.find((item) => item.id === prompt.category)
+                    || { name: 'Unkategorisiert', icon: '📁' };
+                fragment.appendChild(createPromptCard(prompt, category));
+            });
+
+            grid.textContent = '';
+            grid.appendChild(fragment);
+        }
+
+        function createPromptCard(prompt, category) {
+            const element = document.createElement('div');
+            element.className = 'prompt-card';
+            element.setAttribute('role', 'listitem');
+            element.setAttribute('tabindex', '0');
+            element.addEventListener('click', () => viewPrompt(prompt.id));
+            element.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    viewPrompt(prompt.id);
+                }
+            });
+
+            const tags = Array.isArray(prompt.tags) ? prompt.tags : [];
+            element.innerHTML = `
+                <div class="prompt-header">
+                    <div style="min-width: 0;">
+                        <div class="prompt-title" title="${escapeHtml(prompt.title)}">${escapeHtml(prompt.title)}</div>
+                    </div>
+                    <div class="prompt-category">
+                        ${escapeHtml(category.icon)} ${escapeHtml(category.name)}
+                    </div>
+                </div>
+                <div class="prompt-content">${escapeHtml(prompt.content)}</div>
+                <div class="prompt-meta">
+                    <div class="prompt-tags">
+                        ${tags.slice(0, 3).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
+                        ${tags.length > 3 ? `<span class="tag">+${tags.length - 3}</span>` : ''}
+                    </div>
+                    <div>${new Date(prompt.updatedAt).toLocaleDateString('de-DE')}</div>
+                </div>
+            `;
+
+            return element;
+        }
+
+        function selectCategory(categoryId) {
+            appState.currentCategory = categoryId;
+            renderCategories();
+            renderPrompts();
+        }
+
+        // ============================================================================
+        // KATEGORIE-VERWALTUNG
+        // ============================================================================
+
+        function showCategoryManager() {
+            appState.editingCategoryId = null;
+            renderCategoryManagementList();
+            openModal('categoryManagerModal');
+        }
+
+        function renderCategoryManagementList() {
+            const container = document.getElementById('categoryManagementList');
+            if (!container) return;
+
+            container.textContent = '';
+
+            const heading = document.createElement('h4');
+            heading.style.marginBottom = '15px';
+            heading.style.color = '#374151';
+            heading.textContent = 'Vorhandene Kategorien';
+            container.appendChild(heading);
+
+            if (appState.categories.length === 0) {
+                const empty = document.createElement('p');
+                empty.style.color = '#94a3b8';
+                empty.textContent = 'Noch keine Kategorien vorhanden.';
+                container.appendChild(empty);
+                return;
+            }
+
+            const fragment = document.createDocumentFragment();
+
+            appState.categories.forEach((category) => {
+                const promptCount = appState.prompts.filter((prompt) => prompt.category === category.id).length;
+
+                const item = document.createElement('div');
+                item.className = 'category-list-item';
+
+                const icon = document.createElement('div');
+                icon.className = 'category-icon-display';
+                icon.textContent = category.icon;
+
+                const info = document.createElement('div');
+                info.className = 'category-info';
+
+                if (appState.editingCategoryId === category.id) {
+                    const form = document.createElement('form');
+                    form.className = 'category-edit';
+
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.id = 'categoryNameInput';
+                    input.className = 'form-input';
+                    input.value = category.name;
+                    input.maxLength = CONFIG.MAX_CATEGORY_NAME_LENGTH;
+                    input.setAttribute('aria-label', `Neuer Name für ${category.name}`);
+
+                    const save = document.createElement('button');
+                    save.type = 'submit';
+                    save.className = 'btn btn-primary btn-small';
+                    save.textContent = 'Speichern';
+
+                    const cancel = document.createElement('button');
+                    cancel.type = 'button';
+                    cancel.className = 'btn btn-secondary btn-small';
+                    cancel.textContent = 'Abbrechen';
+                    cancel.addEventListener('click', () => cancelCategoryEdit());
+
+                    form.append(input, save, cancel);
+                    form.addEventListener('submit', (event) => {
+                        event.preventDefault();
+                        saveCategoryName(category.id);
+                    });
+                    input.addEventListener('keydown', (event) => {
+                        if (event.key === 'Escape') {
+                            event.preventDefault();
+                            // Nur den Editor schließen, nicht das gesamte Modal.
+                            event.stopPropagation();
+                            cancelCategoryEdit();
+                        }
+                    });
+
+                    info.appendChild(form);
+                    if (typeof requestAnimationFrame === 'function') {
+                        requestAnimationFrame(() => {
+                            input.focus();
+                            input.select();
+                        });
+                    }
+                } else {
+                    const name = document.createElement('div');
+                    name.className = 'category-name-display';
+                    name.textContent = category.name;
+
+                    const count = document.createElement('div');
+                    count.className = 'category-prompt-count';
+                    count.textContent = `${promptCount} Prompt${promptCount !== 1 ? 's' : ''}`;
+
+                    info.append(name, count);
+                }
+
+                const actions = document.createElement('div');
+                actions.className = 'category-actions';
+
+                if (appState.editingCategoryId !== category.id) {
+                    const editButton = document.createElement('button');
+                    editButton.type = 'button';
+                    editButton.className = 'btn btn-secondary btn-small';
+                    editButton.textContent = 'Bearbeiten';
+                    editButton.addEventListener('click', () => startCategoryEdit(category.id));
+                    actions.appendChild(editButton);
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.type = 'button';
+                    deleteButton.className = 'btn btn-danger btn-small';
+                    deleteButton.textContent = 'Löschen';
+                    if (promptCount > 0) {
+                        deleteButton.disabled = true;
+                        deleteButton.title = 'Zuerst Prompts in eine andere Kategorie verschieben';
+                        deleteButton.style.opacity = '0.5';
+                    } else {
+                        deleteButton.addEventListener('click', () => deleteCategory(category.id));
+                    }
+                    actions.appendChild(deleteButton);
+                }
+
+                item.append(icon, info, actions);
+                fragment.appendChild(item);
+            });
+
+            container.appendChild(fragment);
+        }
+
+        function startCategoryEdit(categoryId) {
+            appState.editingCategoryId = categoryId;
+            renderCategoryManagementList();
+        }
+
+        function cancelCategoryEdit() {
+            appState.editingCategoryId = null;
+            renderCategoryManagementList();
+        }
+
+        function saveCategoryName(categoryId) {
+            const input = document.getElementById('categoryNameInput');
+            const category = appState.categories.find((item) => item.id === categoryId);
+            if (!category || !input) return;
+
+            const name = input.value.trim().replace(/\s+/g, ' ');
+            if (!name) {
+                showNotification('Bitte gib einen Namen ein.', true);
+                return;
+            }
+            if (name.length > CONFIG.MAX_CATEGORY_NAME_LENGTH) {
+                showNotification(`Name zu lang (max. ${CONFIG.MAX_CATEGORY_NAME_LENGTH} Zeichen).`, true);
+                return;
+            }
+
+            const exists = appState.categories.some((item) =>
+                item.id !== categoryId && item.name.toLowerCase() === name.toLowerCase()
+            );
+            if (exists) {
+                showNotification('Diese Kategorie existiert bereits.', true);
+                return;
+            }
+
+            category.name = name;
+            appState.editingCategoryId = null;
+            saveData();
+            renderCategories();
+            renderCategoryManagementList();
+            renderPrompts();
+            showNotification('Kategorie aktualisiert.');
+        }
+
+        function addNewCategory() {
+            const input = document.getElementById('newCategoryName');
+            const name = input?.value.trim().replace(/\s+/g, ' ');
+
+            if (!name) {
+                showNotification('Bitte gib einen Namen ein.', true);
+                return;
+            }
+            if (name.length > CONFIG.MAX_CATEGORY_NAME_LENGTH) {
+                showNotification(`Name zu lang (max. ${CONFIG.MAX_CATEGORY_NAME_LENGTH} Zeichen).`, true);
+                return;
+            }
+            if (appState.categories.length >= CONFIG.MAX_CATEGORIES) {
+                showNotification(`Maximal ${CONFIG.MAX_CATEGORIES} Kategorien.`, true);
+                return;
+            }
+
+            const exists = appState.categories.some((category) => category.name.toLowerCase() === name.toLowerCase());
+            if (exists) {
+                showNotification('Diese Kategorie existiert bereits.', true);
+                return;
+            }
+
+            appState.categories.push({ id: createId('cat'), name, icon: '📁' });
+            saveData();
+
+            input.value = '';
+            renderCategories();
+            renderCategoryManagementList();
+            showNotification('Kategorie hinzugefügt.');
+        }
+
+        function deleteCategory(categoryId) {
+            const promptCount = appState.prompts.filter((prompt) => prompt.category === categoryId).length;
+            if (promptCount > 0) {
+                showNotification(`Kategorie enthält ${promptCount} Prompt${promptCount !== 1 ? 's' : ''}. Bitte zuerst verschieben.`, true);
+                return;
+            }
+            if (appState.categories.length <= 1) {
+                showNotification('Mindestens eine Kategorie muss bleiben.', true);
+                return;
+            }
+            if (!confirm('Möchtest du diese Kategorie wirklich löschen?')) return;
+
+            appState.categories = appState.categories.filter((category) => category.id !== categoryId);
+            if (appState.currentCategory === categoryId) appState.currentCategory = 'all';
+
+            saveData();
+            renderCategories();
+            renderCategoryManagementList();
+            renderPrompts();
+            showNotification('Kategorie gelöscht.');
+        }
+
+        // ============================================================================
+        // PROMPT-VERWALTUNG
+        // ============================================================================
+
+        function showAddModal() {
+            appState.editingPromptId = null;
+            const modal = document.getElementById('addModal');
+            const title = document.getElementById('addModalTitle');
+            const form = document.getElementById('promptForm');
+            if (!modal || !title || !form) return;
+
+            title.textContent = 'Neuen Prompt erstellen';
+            form.reset();
+
+            updateMarkdownPreview();
+
+            if (appState.currentCategory !== 'all' &&
+                appState.categories.some((category) => category.id === appState.currentCategory)) {
+                document.getElementById('promptCategory').value = appState.currentCategory;
+            }
+
+            openModal('addModal');
+        }
+
+        function showImportHFModal() {
+            const textarea = document.getElementById('hfChatContent');
+            if (!textarea) return;
+            textarea.value = '';
+            updateMarkdownPreview('chat');
+            openModal('importHFModal');
+        }
+
+        function importHFChat() {
+            const content = document.getElementById('hfChatContent')?.value.trim();
+            const category = document.getElementById('hfImportCategory')?.value;
+
+            if (!content) {
+                showNotification('Bitte füge einen Chatverlauf ein.', true);
+                return;
+            }
+            if (content.length > CONFIG.MAX_CONTENT_LENGTH) {
+                showNotification(`Chatverlauf zu lang (max. ${CONFIG.MAX_CONTENT_LENGTH} Zeichen).`, true);
+                return;
+            }
+
+            let title = 'Chat-Import';
+            for (const line of content.split('\n')) {
+                const trimmed = line.trim();
+                if (trimmed && trimmed.length > 5 && trimmed.length < 80) {
+                    title = trimmed;
+                    break;
+                }
+            }
+
+            const now = new Date().toISOString();
+            const categoryId = appState.categories.some((item) => item.id === category)
+                ? category
+                : appState.categories[0].id;
+
+            appState.prompts.push({
+                id: createId('prompt'),
+                title: title.slice(0, CONFIG.MAX_TITLE_LENGTH),
+                category: categoryId,
+                content,
+                tags: ['imported', 'chat'],
+                createdAt: now,
+                updatedAt: now
+            });
+
+            saveData();
+            renderCategories();
+            renderPrompts();
+            closeModal('importHFModal');
+            showNotification('Chatverlauf eingefügt.');
+        }
+
+        function renderPromptDetail(prompt) {
+            const category = appState.categories.find((item) => item.id === prompt.category)
+                || { name: 'Unkategorisiert', icon: '📁' };
+
+            const title = document.getElementById('viewModalTitle');
+            const content = document.getElementById('viewContent');
+            if (!title || !content) return;
+
+            title.textContent = prompt.title;
+
+            const tags = Array.isArray(prompt.tags) ? prompt.tags : [];
+            content.innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <span class="detail-category">
+                        ${escapeHtml(category.icon)} ${escapeHtml(category.name)}
+                    </span>
+                </div>
+                <div class="markdown-preview markdown-body" style="border-left: 4px solid #4f46e5; background: #f8fafc; padding: 20px; margin-bottom: 20px; max-height: 60vh;">
+                    ${renderMarkdown(prompt.content)}
+                </div>
+                <div style="margin-bottom: 15px;">
+                    ${tags.map((tag) => `<span class="tag" style="font-size: 13px; padding: 4px 10px;">${escapeHtml(tag)}</span>`).join(' ')}
+                </div>
+                <div style="color: #94a3b8; font-size: 12px;">
+                    Erstellt: ${new Date(prompt.createdAt).toLocaleString('de-DE')} |
+                    Zuletzt bearbeitet: ${new Date(prompt.updatedAt).toLocaleString('de-DE')}
+                </div>
+            `;
+
+            const moveSelect = document.getElementById('moveCategorySelect');
+            if (moveSelect) {
+                moveSelect.textContent = '';
+                appState.categories.forEach((item) => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = `${item.icon} ${item.name}`;
+                    if (item.id === prompt.category) option.selected = true;
+                    moveSelect.appendChild(option);
+                });
+                moveSelect.value = prompt.category;
+            }
+        }
+
+        function viewPrompt(id, options = {}) {
+            const prompt = appState.prompts.find((item) => item.id === id);
+            if (!prompt) return;
+
+            appState.currentPromptId = id;
+            renderPromptDetail(prompt);
+
+            if (options.open !== false) {
+                openModal('viewModal');
+            }
+        }
+
+        function editCurrentPrompt() {
+            if (!appState.currentPromptId) return;
+            const prompt = appState.prompts.find((item) => item.id === appState.currentPromptId);
+            if (!prompt) return;
+
+            appState.editingPromptId = appState.currentPromptId;
+            const trigger = modalState.lastFocused;
+
+            const title = document.getElementById('addModalTitle');
+            if (title) title.textContent = 'Prompt bearbeiten';
+
+            document.getElementById('promptTitle').value = prompt.title;
+            document.getElementById('promptCategory').value = prompt.category;
+            document.getElementById('promptContent').value = prompt.content;
+            document.getElementById('promptTags').value = (prompt.tags || []).join(', ');
+
+            updateMarkdownPreview();
+
+            closeModal('viewModal');
+            openModal('addModal', { trigger });
+        }
+
+        function deleteCurrentPrompt() {
+            if (!appState.currentPromptId) return;
+            if (!confirm('Möchtest du diesen Prompt wirklich löschen?')) return;
+
+            appState.prompts = appState.prompts.filter((prompt) => prompt.id !== appState.currentPromptId);
+            saveData();
+            renderCategories();
+            renderPrompts();
+            closeModal('viewModal');
+            appState.currentPromptId = null;
+            showNotification('Prompt gelöscht.');
+        }
+
+        async function copyPrompt() {
+            if (!appState.currentPromptId) return;
+            const prompt = appState.prompts.find((item) => item.id === appState.currentPromptId);
+            if (!prompt) return;
+
+            try {
+                await navigator.clipboard.writeText(prompt.content);
+                showNotification('In Zwischenablage kopiert.');
+                return;
+            } catch (error) {
+                // Fallback für ältere Browser bzw. fehlende Clipboard-Berechtigung.
+            }
+
+            try {
+                const textarea = document.createElement('textarea');
+                textarea.value = prompt.content;
+                textarea.setAttribute('readonly', '');
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                const copied = document.execCommand('copy');
+                textarea.remove();
+                showNotification(copied ? 'In Zwischenablage kopiert.' : 'Fehler beim Kopieren.', !copied);
+            } catch (error) {
+                showNotification('Fehler beim Kopieren.', true);
+            }
+        }
+
+        function movePromptToCategory(promptId, categoryId) {
+            const prompt = appState.prompts.find((item) => item.id === promptId);
+            if (!prompt) return false;
+            if (!appState.categories.some((category) => category.id === categoryId)) return false;
+            if (prompt.category === categoryId) return false;
+
+            prompt.category = categoryId;
+            prompt.updatedAt = new Date().toISOString();
+            saveData();
+            renderCategories();
+            renderPrompts();
+            return true;
+        }
+
+        function moveCurrentPrompt() {
+            const select = document.getElementById('moveCategorySelect');
+            if (!select || !appState.currentPromptId) return;
+
+            const target = select.value;
+            const prompt = appState.prompts.find((item) => item.id === appState.currentPromptId);
+            if (!prompt) return;
+
+            if (prompt.category === target) {
+                showNotification('Der Prompt ist bereits in dieser Kategorie.');
+                return;
+            }
+
+            if (!movePromptToCategory(appState.currentPromptId, target)) {
+                showNotification('Verschieben nicht möglich.', true);
+                return;
+            }
+
+            const category = appState.categories.find((item) => item.id === target);
+            renderPromptDetail(prompt);
+            showNotification(`Verschoben nach ${category ? category.name : target}.`);
+        }
+
+        // ============================================================================
+        // MODALS UND BARRIEREFREIHEIT
+        // ============================================================================
+
+        function getOpenModal() {
+            return document.querySelector('.modal.open');
+        }
+
+        function getFocusable(modal) {
+            return Array.from(modal.querySelectorAll(
+                'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), '
+                + 'select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            )).filter((element) => !element.hidden
+                && element.offsetParent !== null
+                && element.getAttribute('aria-hidden') !== 'true');
+        }
+
+        function openModal(modalId, options = {}) {
             const modal = document.getElementById(modalId);
             if (!modal) return;
 
-            modal.style.display = 'block';
+            if (options.trigger) {
+                modalState.lastFocused = options.trigger;
+            } else {
+                const active = document.activeElement;
+                if (active && typeof active.closest === 'function' && !active.closest('.modal')) {
+                    modalState.lastFocused = active;
+                }
+            }
+
+            modal.classList.add('open');
             modal.setAttribute('aria-hidden', 'false');
-            
-            // Fokus auf erstes interaktives Element setzen
-            const firstInput = modal.querySelector('input, select, textarea, button');
-            if (firstInput) {
-                setTimeout(() => firstInput.focus(), 100);
+            modal.setAttribute('aria-modal', 'true');
+
+            const root = document.getElementById('appRoot');
+            if (root) root.inert = true;
+
+            if (modalId === 'categoryManagerModal') appState.editingCategoryId = null;
+
+            const firstField = modal.querySelector('input:not([type="hidden"]), select, textarea')
+                || modal.querySelector('button');
+            if (firstField && typeof firstField.focus === 'function') {
+                setTimeout(() => {
+                    try {
+                        firstField.focus();
+                    } catch (error) {
+                        // Fokus ist eine Komfortfunktion; ein Fehler darf das Modal nicht blockieren.
+                    }
+                }, 50);
             }
         }
 
-        /**
-         * Schließt ein Modal
-         */
         function closeModal(modalId) {
             const modal = document.getElementById(modalId);
             if (!modal) return;
 
-            modal.style.display = 'none';
+            modal.classList.remove('open');
             modal.setAttribute('aria-hidden', 'true');
-            
-            // Fokus zurücksetzen
-            const trigger = document.activeElement;
-            if (trigger) {
-                trigger.blur();
+
+            const root = document.getElementById('appRoot');
+            if (root) root.inert = false;
+
+            if (modalId === 'categoryManagerModal') appState.editingCategoryId = null;
+
+            const target = modalState.lastFocused;
+            modalState.lastFocused = null;
+
+            if (target && typeof target.focus === 'function'
+                && typeof document.contains === 'function' && document.contains(target)) {
+                setTimeout(() => {
+                    try {
+                        target.focus();
+                    } catch (error) {
+                        // Kein harter Fehler, wenn das auslösende Element verschwunden ist.
+                    }
+                }, 0);
             }
         }
 
-        /**
-         * Hilfe-Modal anzeigen
-         */
         function showHelp() {
             openModal('helpModal');
         }
 
         // ============================================================================
-        // UTILITIES - HELFERFUNKTIONEN
+        // BENACHRICHTIGUNGEN
         // ============================================================================
 
-        /**
-         * Escaped HTML für sichere Ausgabe
-         */
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        /**
-         * Zeigt Benachrichtigungen an
-         */
         function showNotification(message, isError = false) {
             const notification = document.getElementById('notification');
             if (!notification) return;
 
             notification.textContent = message;
             notification.className = isError ? 'notification error show' : 'notification show';
-            
+
             setTimeout(() => {
                 notification.classList.remove('show');
             }, 3000);
         }
 
-        /**
-         * Wählt eine Kategorie aus und aktualisiert die Ansicht
-         */
-        function selectCategory(catId) {
-            appState.currentCategory = catId;
-            renderCategories();
-            renderPrompts();
-        }
-
         // ============================================================================
-        // EVENT-HANDLER - ZENTRALISIERTE EVENT-VERWALTUNG
+        // EVENT-HANDLER UND INITIALISIERUNG
         // ============================================================================
 
-        /**
-         * Initialisiert alle Event-Listener
-         * OPTIMIERUNG: Event-Delegation statt vieler einzelner Listener
-         */
         function initializeEventHandlers() {
-            // Suchfunktion mit Debouncing für Performance
             const searchInput = document.getElementById('searchInput');
             if (searchInput) {
                 searchInput.addEventListener('input', debounce(renderPrompts, CONFIG.DEBOUNCE_DELAY));
             }
 
-            // Markdown-Vorschau: Live-Aktualisierung beim Tippen (Debouncing)
-            const promptContentInput = document.getElementById('promptContent');
-            if (promptContentInput) {
-                promptContentInput.addEventListener('input', debounce(() => updateMarkdownPreview('prompt'), 150));
+            const promptContent = document.getElementById('promptContent');
+            if (promptContent) {
+                promptContent.addEventListener('input', debounce(() => updateMarkdownPreview('prompt'), 150));
             }
 
-            const hfChatContentInput = document.getElementById('hfChatContent');
-            if (hfChatContentInput) {
-                hfChatContentInput.addEventListener('input', debounce(() => updateMarkdownPreview('chat'), 150));
+            const chatContent = document.getElementById('hfChatContent');
+            if (chatContent) {
+                chatContent.addEventListener('input', debounce(() => updateMarkdownPreview('chat'), 150));
             }
 
-            // Vorschau ein-/ausblenden
-            const previewToggleBtn = document.getElementById('previewToggle');
-            if (previewToggleBtn) {
-                previewToggleBtn.addEventListener('click', () => toggleMarkdownPreview('prompt'));
+            document.getElementById('previewToggle')?.addEventListener('click', () => toggleMarkdownPreview('prompt'));
+            document.getElementById('chatPreviewToggle')?.addEventListener('click', () => toggleMarkdownPreview('chat'));
+
+            const newCategoryInput = document.getElementById('newCategoryName');
+            if (newCategoryInput) {
+                newCategoryInput.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        addNewCategory();
+                    }
+                });
             }
 
-            const chatPreviewToggleBtn = document.getElementById('chatPreviewToggle');
-            if (chatPreviewToggleBtn) {
-                chatPreviewToggleBtn.addEventListener('click', () => toggleMarkdownPreview('chat'));
-            }
-
-            // Prompt-Formular
             const promptForm = document.getElementById('promptForm');
             if (promptForm) {
-                promptForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    // Formulardaten sammeln und validieren
-                    const title = document.getElementById('promptTitle')?.value.trim();
+                promptForm.addEventListener('submit', (event) => {
+                    event.preventDefault();
+
+                    const title = document.getElementById('promptTitle')?.value.trim().replace(/\s+/g, ' ');
                     const category = document.getElementById('promptCategory')?.value;
                     const content = document.getElementById('promptContent')?.value.trim();
-                    const tags = document.getElementById('promptTags')?.value.split(',').map(t => t.trim()).filter(t => t) || [];
+                    const tags = normalizeTags(
+                        (document.getElementById('promptTags')?.value || '').split(',').map((tag) => tag.trim()).filter(Boolean)
+                    );
 
-                    // Validierung
                     if (!title || !content) {
-                        showNotification('Titel und Inhalt sind Pflichtfelder!', true);
+                        showNotification('Titel und Inhalt sind Pflichtfelder.', true);
                         return;
                     }
-
                     if (title.length > CONFIG.MAX_TITLE_LENGTH) {
-                        showNotification(`Titel zu lang (max. ${CONFIG.MAX_TITLE_LENGTH} Zeichen)!`, true);
+                        showNotification(`Titel zu lang (max. ${CONFIG.MAX_TITLE_LENGTH} Zeichen).`, true);
                         return;
                     }
-
                     if (content.length > CONFIG.MAX_CONTENT_LENGTH) {
-                        showNotification(`Inhalt zu lang (max. ${CONFIG.MAX_CONTENT_LENGTH} Zeichen)!`, true);
+                        showNotification(`Inhalt zu lang (max. ${CONFIG.MAX_CONTENT_LENGTH} Zeichen).`, true);
+                        return;
+                    }
+                    if (!appState.categories.some((item) => item.id === category)) {
+                        showNotification('Bitte eine gültige Kategorie wählen.', true);
                         return;
                     }
 
                     const now = new Date().toISOString();
-                    
+
                     if (appState.editingPromptId) {
-                        // Bearbeiten
-                        const index = appState.prompts.findIndex(p => p.id === appState.editingPromptId);
+                        const index = appState.prompts.findIndex((prompt) => prompt.id === appState.editingPromptId);
                         if (index !== -1) {
                             appState.prompts[index] = {
                                 ...appState.prompts[index],
-                                title, category, content, tags,
+                                title,
+                                category,
+                                content,
+                                tags,
                                 updatedAt: now
                             };
-                            showNotification('Prompt aktualisiert!');
+                            showNotification('Prompt aktualisiert.');
                         }
                     } else {
-                        // Neu erstellen
-                        const prompt = {
-                            id: 'prompt_' + Date.now(),
-                            title, category, content, tags,
+                        appState.prompts.push({
+                            id: createId('prompt'),
+                            title,
+                            category,
+                            content,
+                            tags,
                             createdAt: now,
                             updatedAt: now
-                        };
-                        appState.prompts.push(prompt);
-                        showNotification('Prompt gespeichert!');
+                        });
+                        showNotification('Prompt gespeichert.');
                     }
 
                     saveData();
@@ -2203,87 +3155,111 @@
                 });
             }
 
-            // Modal schließen bei Klick außerhalb
-            document.addEventListener('click', function(e) {
-                if (e.target.classList.contains('modal')) {
-                    closeModal(e.target.id);
+            document.addEventListener('click', (event) => {
+                if (event.target.classList.contains('modal') && event.target.classList.contains('open')) {
+                    closeModal(event.target.id);
                 }
             });
 
-            // ESC-Taste zum Schließen von Modals
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    const openModal = document.querySelector('.modal[style*="block"]');
-                    if (openModal) {
-                        closeModal(openModal.id);
-                    }
+            document.addEventListener('keydown', (event) => {
+                const open = getOpenModal();
+                if (!open) return;
+
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeModal(open.id);
+                    return;
                 }
+
+                if (event.key !== 'Tab') return;
+
+                const focusable = getFocusable(open);
+                if (focusable.length === 0) {
+                    event.preventDefault();
+                    return;
+                }
+
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
+            });
+
+            window.addEventListener('beforeunload', (event) => {
+                if (!appState.dirtySinceExport) return;
+
+                event.preventDefault();
+                event.returnValue = 'Die Daten sind nur im Browser gespeichert. Backup exportieren?';
+                return event.returnValue;
             });
         }
 
-        // ============================================================================
-        // INITIALISIERUNG - GESAMTE ANWENDUNG STARTEN
-        // ============================================================================
-
-        /**
-         * Hauptinitialisierungsfunktion
-         * Wird beim Laden der Seite aufgerufen
-         */
         function initializeApp() {
-            console.log('🚀 Initialisiere Prompt Manager Pro...');
-            
             try {
-                // 1. Daten laden
                 loadData();
-                
-                // 2. UI initialisieren
                 renderCategories();
                 renderPrompts();
-                
-                // 3. Event-Handler initialisieren
                 initializeEventHandlers();
-                
-                // 4. Status setzen
+
                 appState.isInitialized = true;
-                
-                console.log('✅ Anwendung erfolgreich initialisiert');
-                
+                updateStorageStatus();
+                void restoreFileHandle();
             } catch (error) {
-                console.error('❌ Fehler bei der Initialisierung:', error);
-                showNotification('Fehler beim Starten der Anwendung', true);
-                
-                // Notfall-Initialisierung
-                appState.categories = [...CONFIG.DEFAULT_CATEGORIES];
+                console.error('Fehler bei der Initialisierung:', error);
+                showNotification('Fehler beim Starten der Anwendung.', true);
+
+                appState.categories = CONFIG.DEFAULT_CATEGORIES.map((category) => ({ ...category }));
                 appState.prompts = [];
                 appState.currentCategory = 'all';
-                
+
                 renderCategories();
                 renderPrompts();
             }
         }
 
-        // ============================================================================
-        // GLOBALE EVENT-LISTENER FÜR SPEZIELLE FUNKTIONEN
-        // ============================================================================
-
-        // Beim Laden der Seite initialisieren
         document.addEventListener('DOMContentLoaded', initializeApp);
 
-        // Vor dem Verlassen der Seite: Letzte Änderungen sichern
-        window.addEventListener('beforeunload', function(e) {
-            // Hier könnte man noch ungespeicherte Änderungen warnen
-            // Für diese Anwendung nicht nötig, da alles sofort gespeichert wird
-        });
+        // ============================================================================
+        // TESTBARE SCHNITTSTELLE
+        // ============================================================================
 
-        // Bei Sichtbarkeitsänderung (Tab wechseln): Performance anpassen
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                // Tab ist im Hintergrund: Reduziere Aktivität
-                console.log('📋 Tab im Hintergrund - Performance reduziert');
-            } else {
-                // Tab ist aktiv: Normale Aktualisierung
-                console.log('📋 Tab aktiv - Normale Performance');
-            }
+        window.PromptManager = Object.freeze({
+            version: CONFIG.EXPORT_VERSION,
+            CONFIG,
+            getState: () => appState,
+            setState: (next) => {
+                appState = { ...appState, ...next };
+                return appState;
+            },
+            escapeHtml,
+            sanitizeUrl,
+            renderInline,
+            renderMarkdown,
+            normalizeTags,
+            normalizeIsoDate,
+            normalizeCategory,
+            normalizePrompt,
+            normalizeState,
+            validateData,
+            validateImportedData,
+            decodeBackup,
+            encodeBackup,
+            mergeImportedData,
+            promptFingerprint,
+            createId,
+            movePromptToCategory,
+            isFileBackupSupported,
+            getFileBackupStatus: () => ({
+                status: fileBackup.status,
+                hasHandle: Boolean(fileBackup.handle),
+                lastWriteAt: fileBackup.lastWriteAt
+            })
         });
     </script>
 </body>
