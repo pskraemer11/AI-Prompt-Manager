@@ -85,3 +85,14 @@ test('Detailansicht bietet das Verschieben in eine andere Kategorie', () => {
     assert.match(html, /id="moveCategorySelect"/);
     assert.match(html, /onclick="moveCurrentPrompt\(\)"/);
 });
+
+test('Backup-Button ohne File System Access lädt ein JSON statt zu fehlern', () => {
+    assert.equal(api.isFileBackupSupported(), false);
+    api.setState({ dirtySinceExport: true });
+
+    api.handleBackupButton();
+
+    assert.equal(api.getState().dirtySinceExport, false);
+    assert.ok(api.getState().lastExportAt);
+    assert.ok(!Number.isNaN(new Date(api.getState().lastExportAt).getTime()));
+});

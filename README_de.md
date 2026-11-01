@@ -31,6 +31,8 @@ KISS steht für „Keep it simple, stupid“.
   Jede Änderung wird in diese Datei geschrieben; damit überleben die Daten auch
   Browsereinstellungen, die beim Schließen Cookies und Website-Daten löschen.
   Die App stellt die Daten auf Wunsch aus dieser Datei wieder her.
+  In Firefox und Safari lädt derselbe Button stattdessen ein datiertes JSON-Backup
+  herunter (keine Fehlermeldung); nach einem Neustart über **Import** wiederherstellen.
 - **Browser-Speicher-Warnung:** Ohne verbundene Datei warnt die App beim Schließen,
   wenn Änderungen noch nicht in eine Datei gesichert wurden.
 
@@ -45,8 +47,9 @@ Zwei voneinander unabhängige Sicherungen sind eingebaut:
 1. **JSON-Export** (📤) lädt ein datiertes `prompt-manager-backup-*.json` herunter.
 2. **Datei-Backup** (📁) hält eine JSON-Datei außerhalb des Browsers aktuell.
    Voraussetzung ist die File System Access API (Chrome, Edge, Chromium;
-   in Brave derzeit hinter einem Flag). In Firefox und Safari bleibt
-   Export/Import der Weg.
+   in Brave derzeit hinter einem Flag). In Firefox und Safari lädt derselbe
+   Button stattdessen ein datiertes JSON-Backup herunter; Wiederherstellung
+   über **Import**.
 
 Beim Start mit leerem LocalStorage zeigt die App einen Wiederherstellungs-Hinweis
 und im leeren Zustand einen Import-Button. Bestehende Backups bleiben importierbar.

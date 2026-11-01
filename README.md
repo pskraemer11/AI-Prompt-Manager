@@ -30,6 +30,8 @@ KISS means "Keep it simple, stupid".
 - **File backup:** In Chromium browsers, 📁 **Backup-Datei** connects a JSON file.
   Every change is written back to that file, so the data survives browser settings
   that delete cookies and site data on close. The app restores from that file on demand.
+  In Firefox and Safari the same button downloads a dated JSON backup instead
+  (no error); restore it with **Import** after a restart.
 - **Browser storage warning:** If no file backup is connected, the app warns before
   closing the tab while there are unsaved-to-file changes.
 
@@ -44,8 +46,8 @@ Two independent safety nets are built in:
 1. **JSON export** (📤) downloads a dated `prompt-manager-backup-*.json`.
 2. **File backup** (📁) keeps a JSON file outside the browser and updates it after
    every change. Requires the File System Access API (Chrome, Edge, Chromium;
-   in Brave it is currently behind a flag). Firefox and Safari users keep using
-   export/import.
+   in Brave it is currently behind a flag). In Firefox and Safari the same button
+   downloads a dated JSON backup instead; restore it with **Import**.
 
 On startup with an empty LocalStorage, the app shows a restore banner and an
 import button in the empty state. Existing backups remain importable.

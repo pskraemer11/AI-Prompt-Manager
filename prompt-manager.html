@@ -868,7 +868,7 @@
                     <span>Beim Löschen der Website-Daten sind sie weg. Verbinde eine Backup-Datei oder exportiere regelmäßig.</span>
                 </div>
                 <div class="storage-banner-actions">
-                    <button class="btn btn-primary btn-small" onclick="handleBackupButton()">
+                    <button class="btn btn-primary btn-small" id="bannerBackupBtn" onclick="handleBackupButton()">
                         Backup-Datei verbinden
                     </button>
                     <button class="btn btn-secondary btn-small" onclick="exportData()">
@@ -1050,9 +1050,12 @@
                 <h4 style="margin-bottom: 10px; color: #1e293b;">💾 Datensicherheit</h4>
                 <p>Alle Daten werden <strong>lokal in deinem Browser</strong> gespeichert. Browser-Einstellungen,
                 die Website-Daten beim Schließen löschen, entfernen auch diesen Speicher.</p>
-                <p>Deshalb: <strong>Backup-Datei verbinden</strong> (Chromium-Browser) oder regelmäßig
+                <p>Deshalb: <strong>Backup-Datei verbinden</strong> (Chrome, Edge, Chromium) oder regelmäßig
                 <strong>Export</strong> nutzen. Eine verbundene Datei bleibt außerhalb des Browsers erhalten
                 und wird bei jeder Änderung aktualisiert.</p>
+                <p><strong>Firefox und Safari</strong> können Dateien nicht direkt fortschreiben. Dort lädt
+                der Backup-Button stattdessen ein JSON-Backup herunter; nach dem Neustart über
+                <strong>Import</strong> wiederherstellen.</p>
                 <h4 style="margin-bottom: 10px; color: #1e293b;">🔒 Offline und Sicherheit</h4>
                 <p>Die Anwendung lädt nichts aus dem Internet. Externe Bilder in Markdown werden nicht
                 geladen, sondern als Link angezeigt. Links werden nur nach einem Klick geöffnet.</p>
@@ -1574,7 +1577,7 @@
             if (fileBackup.status === 'available') return 'Datei-Backup gefunden · fortsetzen';
             if (fileBackup.status === 'connecting') return 'Datei-Backup wird verbunden …';
             if (fileBackup.status === 'error') return 'Datei-Backup fehlgeschlagen';
-            if (!isFileBackupSupported()) return 'Nur Browser-Speicher · kein Datei-Backup im Browser';
+            if (!isFileBackupSupported()) return 'Nur Browser-Speicher · Firefox/Safari: Export/Import';
             return 'Nur Browser-Speicher · nicht dauerhaft';
         }
 
@@ -1594,13 +1597,22 @@
 
             const button = document.getElementById('connectFileBtn');
             if (button) {
-                if (fileBackup.status === 'active') {
+                if (!isFileBackupSupported()) {
+                    button.textContent = '📥 Backup exportieren';
+                } else if (fileBackup.status === 'active') {
                     button.textContent = '💾 Backup jetzt schreiben';
                 } else if (fileBackup.handle) {
                     button.textContent = '📁 Backup fortsetzen';
                 } else {
                     button.textContent = '📁 Backup-Datei';
                 }
+            }
+
+            const bannerButton = document.getElementById('bannerBackupBtn');
+            if (bannerButton) {
+                bannerButton.textContent = isFileBackupSupported()
+                    ? 'Backup-Datei verbinden'
+                    : 'Backup exportieren';
             }
         }
 
@@ -1797,7 +1809,12 @@
 
         function handleBackupButton() {
             if (!isFileBackupSupported()) {
-                showNotification('Dieser Browser unterstützt kein Datei-Backup. Bitte JSON exportieren und importieren.', true);
+                // Firefox/Safari: Es gibt keine API zum direkten Fortschreiben.
+                // Statt einer Sackgasse wird das JSON-Backup heruntergeladen.
+                exportData({
+                    message: 'Firefox/Safari können Dateien nicht direkt fortschreiben. '
+                        + 'Das JSON-Backup wurde heruntergeladen; nach dem Neustart über „Import“ wiederherstellen.'
+                });
                 return;
             }
             if (fileBackup.status === 'connecting') return;
@@ -2087,7 +2104,7 @@
             setTimeout(() => input.remove(), 60000);
         }
 
-        function exportData() {
+        function exportData(options = {}) {
             try {
                 const blob = new Blob([encodeBackup()], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -2106,7 +2123,7 @@
                 appState.dirtySinceExport = false;
                 appState.lastExportAt = new Date();
                 updateStorageStatus();
-                showNotification('Backup exportiert.');
+                showNotification(options.message || 'Backup exportiert.');
             } catch (error) {
                 console.error('Export-Fehler:', error);
                 showNotification('Fehler beim Exportieren.', true);
@@ -3304,6 +3321,7 @@
             promptFingerprint,
             createId,
             movePromptToCategory,
+            handleBackupButton,
             isFileBackupSupported,
             getFileBackupStatus: () => ({
                 status: fileBackup.status,
