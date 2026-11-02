@@ -21,11 +21,10 @@ Die Screenshots zeigen den hellen Modus. Die App folgt der Systemeinstellung
 
 ## Oberfläche
 
-Das Layout ist bewusst schlicht und füllt das Fenster: neutrale Flächen,
-Haarlinien, kleine Radien und ein einziger Indigo-Akzent. Die Seitenleiste enthält
-Kategorien und Speicherbefehle; die Kopfzeile hält Suche und die beiden
-Anlage-Aktionen griffbereit. Prompt-Eingabe und Code nutzen Monospace, alles andere
-die Systemschrift.
+Das Layout ist bewusst schlicht und füllt das Fenster: neutrale Flächen, Haarlinien,
+kleine Radien und ein einziger Indigo-Akzent. Die Seitenleiste enthält Kategorien
+und Speicherbefehle; die Kopfzeile hält Suche und die beiden Anlage-Aktionen griffbereit.
+Prompt-Eingabe und Code nutzen Monospace, alles andere die Systemschrift.
 
 Prompts öffnen sich in einem Dialog mit gerendertem Markdown, Tags, Zeitstempeln
 und einer Auswahl zum Verschieben in eine andere Kategorie. Dialoge halten den
