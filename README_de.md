@@ -18,8 +18,14 @@ KISS steht für „Keep it simple, stupid“.
 
 ## Benutzung
 
-- **Start:** `prompt-manager.html` im Browser öffnen. Ohne Server, ohne Installation.
-  Optional: `npm start` (oder `node serve.mjs`) startet einen lokalen Server für Autosave.
+- **Start (empfohlen, einmal einrichten):** `npm run autostart:install`. Das richtet den
+  Server im Windows-Autostart ein und legt ein Symbol auf dem Desktop ab. Danach genügt
+  ein Klick auf das Lesezeichen `http://127.0.0.1:8765/` – der Server läuft bereits,
+  jede Änderung wird automatisch in `prompt-manager-data.json` gesichert.
+  Warum ein Lesezeichen keinen Server starten kann: Browser dürfen aus einer Webseite
+  heraus keine lokalen Programme ausführen. Der Autostart übernimmt diesen Schritt.
+- **Start ohne Server:** `prompt-manager.html` direkt im Browser öffnen (funktioniert
+  überall, dann nur Export/Import als Sicherung).
 - **Export / Import:** Daten als JSON sichern (📤 Export) und wiederherstellen (📥 Import).
   Der Import **mischt statt überschreibt**: bestehende Kategorien und Prompts bleiben erhalten,
   neue kommen dazu; Doppelungen (gleiche ID oder identischer Titel + Inhalt) werden übersprungen.
@@ -35,13 +41,33 @@ KISS steht für „Keep it simple, stupid“.
   Die App stellt die Daten auf Wunsch aus dieser Datei wieder her.
   In Firefox und Safari lädt derselbe Button stattdessen ein datiertes JSON-Backup
   herunter (keine Fehlermeldung); nach einem Neustart über **Import** wiederherstellen.
-- **Lokaler Server (Firefox, Chrome, Edge):** `npm start` (oder `node serve.mjs`) liefert die App
-  unter `http://127.0.0.1:8765/` aus und schreibt jede Änderung in `prompt-manager-data.json`
-  neben der HTML-Datei. Das ist der automatische Backup-Pfad für Firefox und Safari.
-  Optionen: `--port`, `--data`, `--no-open`. Der Server bindet nur an Loopback, nutzt ein
-  zufälliges Same-Origin-Token und ist optional; die Einzeldatei bleibt vollständig lokal.
 - **Browser-Speicher-Warnung:** Ohne aktives Datei- oder Server-Backup warnt die App beim
   Schließen, wenn Änderungen noch nicht gesichert wurden.
+
+## Autostart einrichten (Windows)
+
+```powershell
+cd <Pfad>\tools\ai-prompt-manager
+npm run autostart:install
+```
+
+Das Skript legt zwei Dateien an und startet den Server sofort:
+
+| Datei | Zweck |
+| --- | --- |
+| `%APPDATA%\…\Startup\Prompt Manager (Server).vbs` | startet den Server unsichtbar bei jeder Anmeldung |
+| `Desktop\Prompt Manager.vbs` | startet den Server bei Bedarf nach und öffnet die App |
+
+Danach `http://127.0.0.1:8765/` im Browser öffnen und mit `Strg+D` als Lesezeichen
+ablegen (Ordner „Lesezeichen-Symbolleiste“). Ab dann genügt ein Klick.
+
+```powershell
+npm run autostart:status      # läuft der Server? ist der Autostart aktiv?
+npm run autostart:uninstall   # Autostart und Desktop-Symbol entfernen
+```
+
+Der Server ist idempotent: Ein zweiter Start erkennt die laufende Instanz und beendet
+sich sofort, statt einen zweiten Prozess auf dieselbe Datei zu setzen.
 
 ## Datenspeicherung und Backup
 
@@ -60,7 +86,7 @@ Drei voneinander unabhängige Sicherungen sind eingebaut:
 3. **Lokaler Server** (`node serve.mjs`) hält die Daten in `prompt-manager-data.json`
    auf der Festplatte aktuell. Das funktioniert in Firefox und Safari, wo die
    File System Access API fehlt. Der Server lauscht nur auf 127.0.0.1 und
-   verlangt ein Token pro Sitzung.
+   verlangt ein Token pro Sitzung. Dauerhaft verfügbar über `npm run autostart:install`.
 
 Beim Start mit leerem LocalStorage zeigt die App einen Wiederherstellungs-Hinweis
 und im leeren Zustand einen Import-Button. Bestehende Backups bleiben importierbar.
@@ -100,7 +126,11 @@ Voraussetzung: Node.js 20 oder neuer. Es gibt keine npm-Abhängigkeiten.
 npm test          # Verhaltenstests (node:test + node:vm, ohne Browser)
 npm run check     # statische Prüfung: Syntax, CSP, Offline-Grenzen, IDs, Handler
 npm run verify    # beides
-npm start         # optionaler lokaler Server, http://127.0.0.1:8765/
+npm start         # Server im Vordergrund (Entwicklung)
+npm run open      # Server bei Bedarf starten, Browser öffnen
+npm run autostart:install     # Autostart + Desktop-Symbol einrichten
+npm run autostart:status      # Zustand von Server und Autostart
+npm run autostart:uninstall   # beides wieder entfernen
 bash scripts/hooks-testrun.sh   # fünf Proben für den pre-push-Hook (Git-Bash)
 ```
 
@@ -121,8 +151,9 @@ Die Anwendung stellt eine kleine Testfläche als `window.PromptManager` bereit
 (Markdown-Renderer, URL-Sanitizer, Importprüfung, Merge- und Verschiebe-Logik).
 Die Tests laden das echte Inline-Skript aus `prompt-manager.html`; es gibt keine
 Kopie der Implementierung in der Testsuite. `tests/server.test.mjs` startet den
-lokalen Server auf einem freien Port und prüft Token-Auth, Persistenz, Sicherung
-und Pfadbehandlung.
+lokalen Server auf einem freien Port und prüft Token-Auth, Persistenz, Sicherung,
+Pfadbehandlung und Rebinding-Schutz; `tests/install.test.mjs` prüft die erzeugten
+Autostart-Skripte, Pfade und die Optionsauswertung.
 
 ## Lizenz
 

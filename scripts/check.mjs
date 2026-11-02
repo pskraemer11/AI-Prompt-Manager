@@ -42,12 +42,14 @@ if (scriptMatches.length === 1) {
     }
 }
 
-// --- Syntax des optionalen Servers ------------------------------------------
-try {
-    execFileSync(process.execPath, ['--check', `${ROOT}serve.mjs`], { stdio: 'pipe' });
-    notes.push('serve.mjs syntaktisch gültig');
-} catch (error) {
-    fail(`serve.mjs ist kein gültiges JavaScript: ${error.message}`);
+// --- Syntax des optionalen Servers und des Installers -----------------------
+for (const file of ['serve.mjs', 'scripts/install-autostart.mjs']) {
+    try {
+        execFileSync(process.execPath, ['--check', `${ROOT}${file}`], { stdio: 'pipe' });
+        notes.push(`${file} syntaktisch gültig`);
+    } catch (error) {
+        fail(`${file} ist kein gültiges JavaScript: ${error.message}`);
+    }
 }
 
 // --- Content-Security-Policy ------------------------------------------------

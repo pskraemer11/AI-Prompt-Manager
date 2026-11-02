@@ -18,7 +18,15 @@
  */
 
 import { createServer } from 'node:http';
-import { readFile, writeFile, rename, copyFile, mkdir, stat } from 'node:fs/promises';
+import {
+    readFile,
+    writeFile,
+    rename,
+    copyFile,
+    mkdir,
+    stat,
+    appendFile
+} from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -27,6 +35,7 @@ import { spawn } from 'node:child_process';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 export const TOKEN_PLACEHOLDER = '__PM_SERVER_TOKEN__';
+export const APP_ID = 'ai-prompt-manager';
 const MAX_BODY_BYTES = 30 * 1024 * 1024;
 const MAX_PROMPTS = 10000;
 const MAX_CATEGORIES = 500;
@@ -106,6 +115,16 @@ export function createBackupServer(options = {}) {
     const token = options.token || crypto.randomBytes(32).toString('hex');
     const host = options.host || '127.0.0.1';
 
+    const app = {
+        server: null,
+        token,
+        host,
+        htmlFile,
+        dataFile,
+        port: options.port ?? 8765,
+        url: null
+    };
+
     const server = createServer(async (request, response) => {
         try {
             // DNS-Rebinding abwehren: nur Loopback-Namen (oder der explizit
@@ -131,6 +150,18 @@ export function createBackupServer(options = {}) {
             }
 
             const url = new URL(request.url || '/', 'http://localhost');
+
+            // Öffentlicher Status-Endpunkt: kein Token, aber gleiche Origin- und
+            // Host-Prüfung. Dient nur dazu, eine bereits laufende Instanz zu
+            // erkennen (--ensure), damit kein zweiter Server startet.
+            if (url.pathname === '/api/health') {
+                if (request.method !== 'GET') {
+                    sendJson(response, 405, { error: 'method_not_allowed' });
+                    return;
+                }
+                sendJson(response, 200, { app: APP_ID, pid: process.pid, port: app.port });
+                return;
+            }
 
             if (url.pathname === '/' || url.pathname === '/prompt-manager.html') {
                 if (request.method !== 'GET' && request.method !== 'HEAD') {
@@ -244,15 +275,9 @@ export function createBackupServer(options = {}) {
         }
     });
 
-    return {
-        server,
-        token,
-        host,
-        htmlFile,
-        dataFile,
-        port: options.port ?? 8765,
-        url: null
-    };
+    app.server = server;
+
+    return app;
 }
 
 export async function startBackupServer(options = {}) {
@@ -274,7 +299,9 @@ export function parseArgs(argv) {
         port: 8765,
         host: '127.0.0.1',
         dataFile: null,
+        logFile: null,
         open: true,
+        ensure: false,
         help: false
     };
 
@@ -296,6 +323,10 @@ export function parseArgs(argv) {
             options.host = next();
         } else if (argument === '--data') {
             options.dataFile = next();
+        } else if (argument === '--log') {
+            options.logFile = next();
+        } else if (argument === '--ensure') {
+            options.ensure = true;
         } else if (argument === '--no-open') {
             options.open = false;
         } else if (argument === '--help' || argument === '-h') {
@@ -308,7 +339,7 @@ export function parseArgs(argv) {
     return options;
 }
 
-function openBrowser(url) {
+export function openBrowser(url) {
     const platform = process.platform;
     let command;
     let args;
@@ -340,9 +371,53 @@ function usage() {
         '  --port <n>     Port (Standard 8765, 0 = automatisch)',
         '  --host <addr>  Bind-Adresse (Standard 127.0.0.1)',
         '  --data <datei> JSON-Datei (Standard prompt-manager-data.json neben serve.mjs)',
+        '  --log <datei>  Startmeldungen in eine Protokolldatei schreiben',
+        '  --ensure       Nur starten, wenn nicht schon eine Instanz läuft',
         '  --no-open      Browser nicht automatisch öffnen',
         '  --help         Diese Hilfe'
     ].join('\n');
+}
+
+function hostForUrl(host) {
+    return host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
+}
+
+/**
+ * Prüft, ob unter host:port bereits dieser Server antwortet.
+ * Wird von --ensure genutzt, damit ein Lesezeichen/Shortcut keinen zweiten
+ * Server startet und der vorhandene Datenbestand unangetastet bleibt.
+ */
+export async function probeServer({ host = '127.0.0.1', port, timeoutMs = 1500 } = {}) {
+    if (!port) return { running: false, ours: false };
+    const url = `http://${hostForUrl(host)}:${port}/api/health`;
+
+    try {
+        const response = await fetch(url, {
+            signal: AbortSignal.timeout(timeoutMs),
+            cache: 'no-store'
+        });
+        if (!response.ok) return { running: true, ours: false, status: response.status };
+
+        let health;
+        try {
+            health = await response.json();
+        } catch (error) {
+            // Etwas anderes antwortet auf dem Port, aber es ist nicht diese App.
+            return { running: true, ours: false };
+        }
+
+        return { running: true, ours: health && health.app === APP_ID, health };
+    } catch (error) {
+        return { running: false, ours: false };
+    }
+}
+
+function createLogger(logFile) {
+    if (!logFile) return () => {};
+    return (message) => {
+        const line = `${new Date().toISOString()} ${message}\n`;
+        void appendFile(logFile, line, 'utf8').catch(() => {});
+    };
 }
 
 async function main() {
@@ -355,6 +430,26 @@ async function main() {
     const dataFile = options.dataFile
         ? path.resolve(options.dataFile)
         : path.join(ROOT, 'prompt-manager-data.json');
+    const log = createLogger(options.logFile ? path.resolve(options.logFile) : null);
+    const host = hostForUrl(options.host);
+    const expectedUrl = `http://${host}:${options.port}/`;
+
+    if (options.ensure && options.port !== 0) {
+        const probe = await probeServer({ host: options.host, port: options.port });
+        if (probe.ours) {
+            log(`bereits aktiv auf Port ${options.port}`);
+            console.log(`Prompt Manager läuft bereits: ${expectedUrl}`);
+            if (options.open) openBrowser(expectedUrl);
+            return;
+        }
+        if (probe.running) {
+            log(`Port ${options.port} ist von einem anderen Programm belegt`);
+            console.error(`Port ${options.port} ist von einem anderen Programm belegt. `
+                + 'Nutze --port 8766 oder beende das andere Programm.');
+            process.exitCode = 1;
+            return;
+        }
+    }
 
     let app;
     try {
@@ -365,6 +460,7 @@ async function main() {
         });
     } catch (error) {
         if (error && error.code === 'EADDRINUSE') {
+            log(`Port ${options.port} belegt (EADDRINUSE)`);
             console.error(`Port ${options.port} ist belegt. Nutze --port 8766 oder --port 0.`);
             process.exitCode = 1;
             return;
@@ -376,12 +472,15 @@ async function main() {
         console.warn('Warnung: Der Server ist nicht nur lokal erreichbar.');
     }
 
+    log(`gestartet auf ${app.url} (PID ${process.pid}), Daten: ${dataFile}`);
     console.log(`Prompt Manager: ${app.url}`);
     console.log(`Daten:         ${dataFile}`);
+    if (options.logFile) console.log(`Protokoll:     ${path.resolve(options.logFile)}`);
     console.log('Beenden:       Strg+C');
     if (options.open) openBrowser(app.url);
 
     const shutdown = () => {
+        log('beendet');
         app.server.close(() => process.exit(0));
         setTimeout(() => process.exit(0), 2000).unref();
     };

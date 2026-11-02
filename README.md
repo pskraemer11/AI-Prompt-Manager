@@ -18,7 +18,14 @@ KISS means "Keep it simple, stupid".
 
 ## Usage
 
-- **To get started:** Open `prompt-manager.html` in your browser. No server, no installation.
+- **Recommended start (set up once):** `npm run autostart:install`. This registers the
+  server with Windows autostart and creates a desktop icon. Afterwards a single click on
+  the bookmark `http://127.0.0.1:8765/` is enough - the server is already running and every
+  change is saved to `prompt-manager-data.json` automatically.
+  A bookmark cannot start a local program itself: browsers forbid web pages from launching
+  processes. The autostart entry does that step.
+- **Without the server:** Open `prompt-manager.html` directly in your browser (works
+  everywhere, but then export/import is the only safety net).
 - **Export / Import:** Back up data as JSON (📤 Export) and restore it (📥 Import).
   The import **merges rather than overwrites**: existing categories and prompts are preserved,
   new ones are added; duplicates (same ID or identical title + content) are skipped.
@@ -33,13 +40,33 @@ KISS means "Keep it simple, stupid".
   that delete cookies and site data on close. The app restores from that file on demand.
   In Firefox and Safari the same button downloads a dated JSON backup instead
   (no error); restore it with **Import** after a restart.
-- **Local server (Firefox, Chrome, Edge):** `npm start` (or `node serve.mjs`) serves the app at
-  `http://127.0.0.1:8765/` and writes every change to `prompt-manager-data.json` next to the HTML.
-  This is the automatic backup path for Firefox and Safari. Options: `--port`, `--data`, `--no-open`.
-  The server binds to loopback, uses a random same-origin token, and is optional; the standalone
-  HTML remains fully local.
 - **Browser storage warning:** If no file or server backup is active, the app warns before
   closing the tab while there are unsaved changes.
+
+## Autostart setup (Windows)
+
+```powershell
+cd <path>\tools\ai-prompt-manager
+npm run autostart:install
+```
+
+The script writes two files and starts the server immediately:
+
+| File | Purpose |
+| --- | --- |
+| `%APPDATA%\…\Startup\Prompt Manager (Server).vbs` | starts the server hidden at every sign-in |
+| `Desktop\Prompt Manager.vbs` | starts the server on demand and opens the app |
+
+Then open `http://127.0.0.1:8765/` in your browser and save it with `Ctrl+D`
+(folder "Bookmarks Toolbar"). From then on a single click is enough.
+
+```powershell
+npm run autostart:status      # is the server running? is autostart active?
+npm run autostart:uninstall   # remove autostart and the desktop icon
+```
+
+The server is idempotent: a second launch detects the running instance and exits
+immediately instead of starting another process on the same data file.
 
 ## Data storage and backup
 
@@ -57,6 +84,7 @@ Three independent safety nets are built in:
 3. **Local server** (`node serve.mjs`) keeps the data in `prompt-manager-data.json` on disk
    and updates it after every change. This works in Firefox and Safari, where the File System
    Access API is unavailable. The server only listens on 127.0.0.1 and requires a per-session token.
+   Make it permanent with `npm run autostart:install`.
 
 On startup with an empty LocalStorage, the app shows a restore banner and an
 import button in the empty state. Existing backups remain importable.
@@ -96,7 +124,11 @@ Requirements: Node.js 20 or newer. There are no npm dependencies.
 npm test          # behavior tests (node:test + node:vm, no browser needed)
 npm run check     # static checks: syntax, CSP, offline limits, IDs, handlers
 npm run verify    # both
-npm start         # optional local server, http://127.0.0.1:8765/
+npm start         # server in the foreground (development)
+npm run open      # start the server only if needed, open the browser
+npm run autostart:install     # autostart entry + desktop icon
+npm run autostart:status      # server and autostart state
+npm run autostart:uninstall   # remove both
 bash scripts/hooks-testrun.sh   # five pre-push hook probes (Git Bash)
 ```
 
@@ -118,7 +150,8 @@ The application exposes a small test surface as `window.PromptManager`
 Tests load the real inline script from `prompt-manager.html`; there is no copy
 of the implementation in the test suite. `tests/server.test.mjs` starts the
 local server on an ephemeral port and checks token auth, persistence, backups,
-and path handling.
+path handling and rebinding guards; `tests/install.test.mjs` verifies the
+generated autostart scripts, paths and option parsing.
 
 ## License
 

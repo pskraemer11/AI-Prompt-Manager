@@ -37,6 +37,9 @@
         SPDX-License-Identifier: GPL-3.0-or-later
     -->
     <title>Prompt Manager Pro - Optimierte Version</title>
+    <!-- Symbol für Lesezeichen-Leiste und Tab (eingebettet, kein Netzwerkzugriff) -->
+    <link rel="icon" type="image/svg+xml"
+          href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM0ZjQ2ZTUiLz48dGV4dCB4PSIzMiIgeT0iNDUiIGZvbnQtZmFtaWx5PSJTZWdvZSBVSSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMzQiIGZvbnQtd2VpZ2h0PSI2MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNmZmZmZmYiPlA8L3RleHQ+PC9zdmc+">
     <style>
         /* Reset und Basis-Styles */
         * {
@@ -1061,8 +1064,13 @@
                 und wird bei jeder Änderung aktualisiert.</p>
                 <p><strong>Firefox und Safari</strong> können Dateien nicht direkt fortschreiben. Dort lädt
                 der Backup-Button stattdessen ein JSON-Backup herunter; nach dem Neustart über
-                <strong>Import</strong> wiederherstellen. Alternativ den optionalen lokalen Server starten:
-                <code>npm start</code> — dann schreibt die App automatisch in <code>prompt-manager-data.json</code>.</p>
+                <strong>Import</strong> wiederherstellen. Dauerhaft automatisch speichert der lokale
+                Server: einmalig <code>npm run autostart:install</code> im Projektordner ausführen.
+                Danach genügt ein Klick auf das Lesezeichen <code>http://127.0.0.1:8765/</code>;
+                die App schreibt jede Änderung in <code>prompt-manager-data.json</code>.</p>
+                <p><strong>Wichtig:</strong> Datei und Server sind getrennte Speicher. Nutze dauerhaft
+                denselben Einstieg – am einfachsten das Lesezeichen auf <code>http://127.0.0.1:8765/</code>.
+                Daten aus der Datei lassen sich jederzeit über <strong>Import</strong> in den Server übernehmen.</p>
                 <h4 style="margin-bottom: 10px; color: #1e293b;">🔒 Offline und Sicherheit</h4>
                 <p>Die Anwendung lädt nichts aus dem Internet. Externe Bilder in Markdown werden nicht
                 geladen, sondern als Link angezeigt. Links werden nur nach einem Klick geöffnet.</p>

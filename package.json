@@ -1,6 +1,6 @@
 {
   "name": "ai-prompt-manager",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "private": true,
   "description": "Lokale Promptverwaltung als eigenständige HTML-Datei",
   "type": "module",
@@ -10,6 +10,10 @@
   },
   "scripts": {
     "start": "node serve.mjs",
+    "open": "node serve.mjs --ensure",
+    "autostart:install": "node scripts/install-autostart.mjs",
+    "autostart:status": "node scripts/install-autostart.mjs --status",
+    "autostart:uninstall": "node scripts/install-autostart.mjs --uninstall",
     "test": "node --test tests/",
     "check": "node scripts/check.mjs",
     "verify": "npm run check && npm test"

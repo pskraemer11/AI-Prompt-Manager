@@ -1,10 +1,16 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { request as httpRequest } from 'node:http';
+import { request as httpRequest, createServer } from 'node:http';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { startBackupServer, TOKEN_PLACEHOLDER } from '../serve.mjs';
+import { fileURLToPath } from 'node:url';
+import { startBackupServer, probeServer, TOKEN_PLACEHOLDER, APP_ID } from '../serve.mjs';
+
+const run = promisify(execFile);
+const SERVE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'serve.mjs');
 
 const directory = await mkdtemp(path.join(tmpdir(), 'pm-server-'));
 const dataFile = path.join(directory, 'data.json');
@@ -151,4 +157,75 @@ test('fremde Origin wird bei PUT abgelehnt', async () => {
         }
     }, JSON.stringify({ categories: [], prompts: [] }));
     assert.equal(response.statusCode, 403);
+});
+
+test('Status-Endpunkt meldet die App ohne Token', async () => {
+    const response = await fetch(`${app.url}api/health`);
+    assert.equal(response.status, 200);
+
+    const health = await response.json();
+    assert.equal(health.app, APP_ID);
+    assert.equal(health.port, app.port);
+});
+
+test('probeServer erkennt eigene, fremde und fehlende Server', async () => {
+    const own = await probeServer({ port: app.port });
+    assert.equal(own.ours, true);
+    assert.equal(own.health.app, APP_ID);
+
+    const foreign = createServer((request, response) => {
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ app: 'etwas-anderes' }));
+    });
+    await new Promise((resolve) => foreign.listen(0, '127.0.0.1', resolve));
+    const foreignPort = foreign.address().port;
+
+    try {
+        const other = await probeServer({ port: foreignPort });
+        assert.equal(other.running, true);
+        assert.equal(other.ours, false);
+    } finally {
+        await new Promise((resolve) => foreign.close(resolve));
+    }
+
+    const missing = await probeServer({ port: foreignPort, timeoutMs: 400 });
+    assert.equal(missing.running, false);
+    assert.equal(missing.ours, false);
+});
+
+test('--ensure startet keinen zweiten Server und beendet sich sauber', async () => {
+    const { stdout } = await run(process.execPath, [
+        SERVE,
+        '--ensure',
+        '--no-open',
+        '--port', String(app.port)
+    ]);
+
+    assert.match(stdout, /läuft bereits/);
+
+    // Der bestehende Server ist weiterhin erreichbar und behaelt sein Token.
+    const response = await fetch(`${app.url}api/state`, { headers });
+    assert.equal(response.status, 200);
+});
+
+test('--ensure meldet einen fremd belegten Port', async () => {
+    const foreign = createServer((request, response) => {
+        response.writeHead(200, { 'Content-Type': 'text/plain' });
+        response.end('belegt');
+    });
+    await new Promise((resolve) => foreign.listen(0, '127.0.0.1', resolve));
+    const foreignPort = foreign.address().port;
+
+    try {
+        await assert.rejects(
+            run(process.execPath, [SERVE, '--ensure', '--no-open', '--port', String(foreignPort)]),
+            (error) => {
+                assert.equal(error.code, 1);
+                assert.match(String(error.stderr), /anderen Programm belegt/);
+                return true;
+            }
+        );
+    } finally {
+        await new Promise((resolve) => foreign.close(resolve));
+    }
 });
