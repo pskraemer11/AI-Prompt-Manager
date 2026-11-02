@@ -10,10 +10,10 @@ KISS steht für „Keep it simple, stupid“.
 
 ## Screenshots
 
-| Erster Start (leer, ohne Daten) | Prompt-Bibliothek mit Kategorien |
-| :---: | :---: |
-| ![Erster Start](docs/screenshots/pm-start.png) | ![Prompt-Bibliothek](docs/screenshots/pm-list.png) |
-| **Detailansicht** — Markdown live gerendert | **Chatverlauf einfügen** — mit Live-Vorschau |
+| Erster Start (leer, ohne Daten)                  | Prompt-Bibliothek mit Kategorien                   |
+| :----------------------------------------------: | :------------------------------------------------: |
+| ![Erster Start](docs/screenshots/pm-start.png)   | ![Prompt-Bibliothek](docs/screenshots/pm-list.png) |
+| **Detailansicht** — Markdown live gerendert      | **Chatverlauf einfügen** — mit Live-Vorschau       |
 | ![Detailansicht](docs/screenshots/pm-detail.png) | ![Chatverlauf](docs/screenshots/pm-chat-modal.png) |
 
 Die Screenshots zeigen den hellen Modus. Die App folgt der Systemeinstellung
@@ -69,10 +69,10 @@ npm run autostart:install
 
 Das Skript legt zwei Dateien an und startet den Server sofort:
 
-| Datei | Zweck |
-| --- | --- |
-| `%APPDATA%\…\Startup\Prompt Manager (Server).vbs` | startet den Server unsichtbar bei jeder Anmeldung |
-| `Desktop\Prompt Manager.vbs` | startet den Server bei Bedarf nach und öffnet die App |
+| Datei                                             | Zweck                                                 |
+| ------------------------------------------------- | ----------------------------------------------------- |
+| `%APPDATA%\…\Startup\Prompt Manager (Server).vbs` | startet den Server unsichtbar bei jeder Anmeldung     |
+| `Desktop\Prompt Manager.vbs`                      | startet den Server bei Bedarf nach und öffnet die App |
 
 Danach `http://127.0.0.1:8765/` im Browser öffnen und mit `Strg+D` als Lesezeichen
 ablegen (Ordner „Lesezeichen-Symbolleiste“). Ab dann genügt ein Klick.
