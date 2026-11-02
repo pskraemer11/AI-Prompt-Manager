@@ -14,7 +14,7 @@
     "autostart:install": "node scripts/install-autostart.mjs",
     "autostart:status": "node scripts/install-autostart.mjs --status",
     "autostart:uninstall": "node scripts/install-autostart.mjs --uninstall",
-    "test": "node --test tests/",
+    "test": "node --test",
     "check": "node scripts/check.mjs",
     "verify": "npm run check && npm test"
   }
