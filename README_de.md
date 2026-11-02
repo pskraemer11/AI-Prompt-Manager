@@ -16,6 +16,22 @@ KISS steht für „Keep it simple, stupid“.
 | **Detailansicht** — Markdown live gerendert | **Chatverlauf einfügen** — mit Live-Vorschau |
 | ![Detailansicht](docs/screenshots/pm-detail.png) | ![Chatverlauf](docs/screenshots/pm-chat-modal.png) |
 
+Die Screenshots zeigen den hellen Modus. Die App folgt der Systemeinstellung
+(`prefers-color-scheme`); einen eigenen Theme-Schalter gibt es nicht.
+
+## Oberfläche
+
+Das Layout ist bewusst schlicht und füllt das Fenster: neutrale Flächen,
+Haarlinien, kleine Radien und ein einziger Indigo-Akzent. Die Seitenleiste enthält
+Kategorien und Speicherbefehle; die Kopfzeile hält Suche und die beiden
+Anlage-Aktionen griffbereit. Prompt-Eingabe und Code nutzen Monospace, alles andere
+die Systemschrift.
+
+Prompts öffnen sich in einem Dialog mit gerendertem Markdown, Tags, Zeitstempeln
+und einer Auswahl zum Verschieben in eine andere Kategorie. Dialoge halten den
+Fokus, schließen mit `Esc` und geben ihn an das auslösende Element zurück. Unter
+860 px rutscht die Seitenleiste über den Inhalt, das Prompt-Raster wird einspaltig.
+
 ## Benutzung
 
 - **Start (empfohlen, einmal einrichten):** `npm run autostart:install`. Das richtet den
@@ -26,16 +42,16 @@ KISS steht für „Keep it simple, stupid“.
   heraus keine lokalen Programme ausführen. Der Autostart übernimmt diesen Schritt.
 - **Start ohne Server:** `prompt-manager.html` direkt im Browser öffnen (funktioniert
   überall, dann nur Export/Import als Sicherung).
-- **Export / Import:** Daten als JSON sichern (📤 Export) und wiederherstellen (📥 Import).
+- **Export / Import:** Daten als JSON sichern (**Export**) und wiederherstellen (**Import**).
   Der Import **mischt statt überschreibt**: bestehende Kategorien und Prompts bleiben erhalten,
   neue kommen dazu; Doppelungen (gleiche ID oder identischer Titel + Inhalt) werden übersprungen.
   Importe werden geprüft und begrenzt; Einträge mit ungültigen Feldern werden gemeldet und übersprungen.
-- **Chatverlauf einfügen:** Chatverläufe aus beliebigen Chat-KIs einfügen (📋-Button).
+- **Chatverlauf einfügen:** Chatverläufe aus beliebigen Chat-KIs einfügen (**Chat einfügen**).
   Markdown (Überschriften, Tabellen, Listen, Task-Listen, Code, Zitate, Fett/Kursiv,
   Bilder, Links) wird live in der Vorschau gerendert und in der Detailansicht formatiert angezeigt.
-- **Kategorien:** über ⚙️ Kategorien anlegen, umbenennen, mit Icon versehen.
+- **Kategorien:** über den Button **Kategorien** anlegen, umbenennen, mit Icon versehen.
   In der Detailansicht gibt es eine **Verschiebe-Auswahl**, um einen Prompt einer anderen Kategorie zuzuordnen.
-- **Datei-Backup:** In Chromium-Browsern verbindet 📁 **Backup-Datei** eine JSON-Datei.
+- **Datei-Backup:** In Chromium-Browsern verbindet **Backup-Datei** eine JSON-Datei.
   Jede Änderung wird in diese Datei geschrieben; damit überleben die Daten auch
   Browsereinstellungen, die beim Schließen Cookies und Website-Daten löschen.
   Die App stellt die Daten auf Wunsch aus dieser Datei wieder her.
@@ -88,8 +104,8 @@ Daten danach weg.
 
 Drei voneinander unabhängige Sicherungen sind eingebaut:
 
-1. **JSON-Export** (📤) lädt ein datiertes `prompt-manager-backup-*.json` herunter.
-2. **Datei-Backup** (📁) hält eine JSON-Datei außerhalb des Browsers aktuell.
+1. **JSON-Export** (**Export**) lädt ein datiertes `prompt-manager-backup-*.json` herunter.
+2. **Datei-Backup** (**Backup-Datei**) hält eine JSON-Datei außerhalb des Browsers aktuell.
    Voraussetzung ist die File System Access API (Chrome, Edge, Chromium;
    in Brave derzeit hinter einem Flag). In Firefox und Safari lädt derselbe
    Button stattdessen ein datiertes JSON-Backup herunter; Wiederherstellung

@@ -16,6 +16,22 @@ KISS means "Keep it simple, stupid".
 | **Detail view** — Markdown rendered live | **Chat history import** — with live preview |
 | ![Detail view](docs/screenshots/pm-detail.png) | ![Chat import](docs/screenshots/pm-chat-modal.png) |
 
+The screenshots show light mode. The app follows the operating system's light or
+dark preference (`prefers-color-scheme`); there is no separate theme switch.
+
+## Interface
+
+The layout is deliberately plain and fills the window: neutral surfaces, hairline
+borders, small radii and a single indigo accent. The sidebar holds the categories
+and the storage controls; the header keeps search and the two create actions within
+reach. Prompt input and code use a monospace face, everything else the system font
+stack.
+
+Prompts open in a dialog with rendered Markdown, tags, timestamps and a control for
+moving them to another category. Dialogs keep focus inside, close with `Esc`, and
+return focus to the element that opened them. Below 860 px the sidebar moves above
+the content and the prompt grid becomes one column.
+
 ## Usage
 
 - **Recommended start (set up once):** `npm run autostart:install`. This registers the
@@ -26,16 +42,16 @@ KISS means "Keep it simple, stupid".
   processes. The autostart entry does that step.
 - **Without the server:** Open `prompt-manager.html` directly in your browser (works
   everywhere, but then export/import is the only safety net).
-- **Export / Import:** Back up data as JSON (📤 Export) and restore it (📥 Import).
+- **Export / Import:** Back up data as JSON (**Export**) and restore it (**Import**).
   The import **merges rather than overwrites**: existing categories and prompts are preserved,
   new ones are added; duplicates (same ID or identical title + content) are skipped.
   Imports are validated and limited; entries with invalid fields are reported and skipped.
-- **Import chat history:** Import chat histories from any chat AI (📋 button).
+- **Import chat history:** Import chat histories from any chat AI (**Chat einfügen**).
   Markdown (headings, tables, lists, task lists, code, quotes, bold/italics,
   images, links) is rendered live in the preview and displayed formatted in the detail view.
-- **Categories:** Use ⚙️ to create, rename, and assign icons to categories.
+- **Categories:** Use **Kategorien** to create, rename, and assign icons to categories.
   The detail view has a **move control** to move a prompt to another category.
-- **File backup:** In Chromium browsers, 📁 **Backup-Datei** connects a JSON file.
+- **File backup:** In Chromium browsers, **Backup-Datei** connects a JSON file.
   Every change is written back to that file, so the data survives browser settings
   that delete cookies and site data on close. The app restores from that file on demand.
   In Firefox and Safari the same button downloads a dated JSON backup instead
@@ -87,8 +103,8 @@ closing the browser unless a backup exists.
 
 Three independent safety nets are built in:
 
-1. **JSON export** (📤) downloads a dated `prompt-manager-backup-*.json`.
-2. **File backup** (📁) keeps a JSON file outside the browser and updates it after
+1. **JSON export** (**Export**) downloads a dated `prompt-manager-backup-*.json`.
+2. **File backup** (**Backup-Datei**) keeps a JSON file outside the browser and updates it after
    every change. Requires the File System Access API (Chrome, Edge, Chromium;
    in Brave it is currently behind a flag). In Firefox and Safari the same button
    downloads a dated JSON backup instead; restore it with **Import**.
