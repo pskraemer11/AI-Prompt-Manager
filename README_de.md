@@ -34,28 +34,34 @@ Fokus, schließen mit `Esc` und geben ihn an das auslösende Element zurück. Un
 ## Benutzung
 
 - **Start (empfohlen, einmal einrichten):** `npm run autostart:install`. Das richtet den
-  Server im Windows-Autostart ein und legt ein Symbol auf dem Desktop ab. Danach genügt
-  ein Klick auf das Lesezeichen `http://127.0.0.1:8765/` – der Server läuft bereits,
+  lokalen Server im Windows-Autostart ein und legt ein Symbol auf dem Desktop ab. 
+  Danach genügt ein Klick auf das Lesezeichen `http://127.0.0.1:8765/` – der Server läuft bereits,
   jede Änderung wird automatisch in `prompt-manager-data.json` gesichert.
   Warum ein Lesezeichen keinen Server starten kann: Browser dürfen aus einer Webseite
   heraus keine lokalen Programme ausführen. Der Autostart übernimmt diesen Schritt.
+  
 - **Start ohne Server:** `prompt-manager.html` direkt im Browser öffnen (funktioniert
   überall, dann nur Export/Import als Sicherung).
+  
 - **Export / Import:** Daten als JSON sichern (**Export**) und wiederherstellen (**Import**).
   Der Import **mischt statt überschreibt**: bestehende Kategorien und Prompts bleiben erhalten,
   neue kommen dazu; Doppelungen (gleiche ID oder identischer Titel + Inhalt) werden übersprungen.
   Importe werden geprüft und begrenzt; Einträge mit ungültigen Feldern werden gemeldet und übersprungen.
+  
 - **Chatverlauf einfügen:** Chatverläufe aus beliebigen Chat-KIs einfügen (**Chat einfügen**).
   Markdown (Überschriften, Tabellen, Listen, Task-Listen, Code, Zitate, Fett/Kursiv,
   Bilder, Links) wird live in der Vorschau gerendert und in der Detailansicht formatiert angezeigt.
+  
 - **Kategorien:** über den Button **Kategorien** anlegen, umbenennen, mit Icon versehen.
   In der Detailansicht gibt es eine **Verschiebe-Auswahl**, um einen Prompt einer anderen Kategorie zuzuordnen.
+  
 - **Datei-Backup:** In Chromium-Browsern verbindet **Backup-Datei** eine JSON-Datei.
   Jede Änderung wird in diese Datei geschrieben; damit überleben die Daten auch
   Browsereinstellungen, die beim Schließen Cookies und Website-Daten löschen.
   Die App stellt die Daten auf Wunsch aus dieser Datei wieder her.
   In Firefox und Safari lädt derselbe Button stattdessen ein datiertes JSON-Backup
   herunter (keine Fehlermeldung); nach einem Neustart über **Import** wiederherstellen.
+  
 - **Browser-Speicher-Warnung:** Ohne aktives Datei- oder Server-Backup warnt die App beim
   Schließen, wenn Änderungen noch nicht gesichert wurden.
 
@@ -104,11 +110,13 @@ Daten danach weg.
 Drei voneinander unabhängige Sicherungen sind eingebaut:
 
 1. **JSON-Export** (**Export**) lädt ein datiertes `prompt-manager-backup-*.json` herunter.
+
 2. **Datei-Backup** (**Backup-Datei**) hält eine JSON-Datei außerhalb des Browsers aktuell.
    Voraussetzung ist die File System Access API (Chrome, Edge, Chromium;
    in Brave derzeit hinter einem Flag). In Firefox und Safari lädt derselbe
    Button stattdessen ein datiertes JSON-Backup herunter; Wiederherstellung
    über **Import**.
+   
 3. **Lokaler Server** (`node serve.mjs`) hält die Daten in `prompt-manager-data.json`
    auf der Festplatte aktuell. Das funktioniert in Firefox und Safari, wo die
    File System Access API fehlt. Der Server lauscht nur auf 127.0.0.1 und
@@ -126,23 +134,26 @@ weil sie persönliche Inhalte enthalten können.
   Die CSP erlaubt Verbindungen nur zur eigenen Origin (`connect-src 'self'`); der optionale
   lokale Server nutzt ausschließlich 127.0.0.1, die Einzeldatei stellt gar keine Anfragen.
   `img-src data:` und `default-src 'none'` bleiben in Kraft.
+  
 - **Externe Bilder in Markdown werden nicht geladen.** Sie erscheinen als Link mit dem
   Hinweis „(extern, nicht geladen)“; nur eingebettete `data:image/...`-Rasterbilder werden angezeigt.
+  
 - **HTML wird escaped** in Prompts, Kategorien, Tags und Markdown. Attributwerte escapen
   Anführungszeichen; Links erlauben nur `http(s)`, `mailto`, relative Pfade und Fragmente.
   `javascript:`, `data:`, `file:` und protokollrelative URLs werden blockiert.
+  
 - **Importprüfung:** Schema-Prüfung, Größenlimits (25 MB Datei, 10.000 Prompts,
   500 Kategorien), Feldnormalisierung und Kürzung von Inhalten auf 50.000 Zeichen.
 
 ## Grenzen
 
-| Feld | Limit |
-| --- | --- |
-| Titel | 100 Zeichen |
-| Inhalt | 50.000 Zeichen |
-| Tags | 20 pro Prompt, je 40 Zeichen |
-| Kategoriename | 50 Zeichen |
-| Importdatei | 25 MB |
+| Feld          | Limit                        |
+| ------------- | ---------------------------- |
+| Titel         | 100 Zeichen                  |
+| Inhalt        | 50.000 Zeichen               |
+| Tags          | 20 pro Prompt, je 40 Zeichen |
+| Kategoriename | 50 Zeichen                   |
+| Importdatei   | 25 MB                        |
 
 ## Entwicklung
 

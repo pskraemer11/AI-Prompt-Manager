@@ -10,10 +10,10 @@ KISS means "Keep it simple, stupid".
 
 ## Screenshots
 
-| First start (clean, no data) | Prompt library with categories |
-| :---: | :---: |
-| ![First start](docs/screenshots/pm-start.png) | ![Prompt library](docs/screenshots/pm-list.png) |
-| **Detail view** — Markdown rendered live | **Chat history import** — with live preview |
+| First start (clean, no data)                   | Prompt library with categories                     |
+| :--------------------------------------------: | :------------------------------------------------: |
+| ![First start](docs/screenshots/pm-start.png)  | ![Prompt library](docs/screenshots/pm-list.png)    |
+| **Detail view** — Markdown rendered live       | **Chat history import** — with live preview        |
 | ![Detail view](docs/screenshots/pm-detail.png) | ![Chat import](docs/screenshots/pm-chat-modal.png) |
 
 The screenshots show light mode. The app follows the operating system's light or
@@ -68,10 +68,10 @@ npm run autostart:install
 
 The script writes two files and starts the server immediately:
 
-| File | Purpose |
-| --- | --- |
-| `%APPDATA%\…\Startup\Prompt Manager (Server).vbs` | starts the server hidden at every sign-in |
-| `Desktop\Prompt Manager.vbs` | starts the server on demand and opens the app |
+| File                                              | Purpose                                       |
+| ------------------------------------------------- | --------------------------------------------- |
+| `%APPDATA%\…\Startup\Prompt Manager (Server).vbs` | starts the server hidden at every sign-in     |
+| `Desktop\Prompt Manager.vbs`                      | starts the server on demand and opens the app |
 
 Then open `http://127.0.0.1:8765/` in your browser and save it with `Ctrl+D`
 (folder "Bookmarks Toolbar"). From then on a single click is enough.
@@ -135,13 +135,13 @@ because they may contain personal content.
 
 ## Limits
 
-| Field | Limit |
-| --- | --- |
-| Title | 100 characters |
-| Content | 50,000 characters |
-| Tags | 20 per prompt, 40 characters each |
-| Category name | 50 characters |
-| Import file | 25 MB |
+| Field         | Limit                             |
+| ------------- | --------------------------------- |
+| Title         | 100 characters                    |
+| Content       | 50,000 characters                 |
+| Tags          | 20 per prompt, 40 characters each |
+| Category name | 50 characters                     |
+| Import file   | 25 MB                             |
 
 ## Development
 
