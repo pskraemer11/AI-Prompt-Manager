@@ -211,8 +211,13 @@ async function install(options) {
     console.log('  2. Strg+D drücken und "Lesezeichen-Symbolleiste" wählen.');
     console.log('  Danach genügt ein Klick auf das Lesezeichen - der Server läuft bereits.');
     console.log('');
-    console.log('Entfernen: node scripts/install-autostart.mjs --uninstall');
-    console.log('Zustand:   node scripts/install-autostart.mjs --status');
+    // Absolute Pfade: Diese Befehle funktionieren aus jedem Verzeichnis.
+    const self = fileURLToPath(import.meta.url);
+    console.log(`Zustand:   node "${self}" --status`);
+    console.log(`Entfernen: node "${self}" --uninstall`);
+    console.log('');
+    console.log('Den Zustand zeigt auch die App selbst in der Seitenleiste an');
+    console.log('("Server-Backup aktiv · HH:MM").');
 
     if (!options.noOpen) openBrowser(url);
 }

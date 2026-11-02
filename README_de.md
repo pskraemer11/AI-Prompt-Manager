@@ -66,6 +66,17 @@ npm run autostart:status      # läuft der Server? ist der Autostart aktiv?
 npm run autostart:uninstall   # Autostart und Desktop-Symbol entfernen
 ```
 
+Die Befehle müssen im Projektordner laufen. Aus einem anderen Verzeichnis
+(z. B. `C:\Windows\System32`) bricht npm mit `ENOENT … package.json` ab. Dann
+entweder in den Ordner wechseln oder den Ordner vorgeben:
+
+```powershell
+npm --prefix "<Pfad>\tools\ai-prompt-manager" run autostart:status
+```
+
+Den wichtigsten Zustand zeigt ohnehin die App selbst in der Seitenleiste
+(„Server-Backup aktiv · HH:MM").
+
 Der Server ist idempotent: Ein zweiter Start erkennt die laufende Instanz und beendet
 sich sofort, statt einen zweiten Prozess auf dieselbe Datei zu setzen.
 
