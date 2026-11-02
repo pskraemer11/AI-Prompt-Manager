@@ -174,6 +174,13 @@ rhysd.actionlint`); `pre-push` blockiert ohne `gitleaks` (fail closed). Die CI
 testet auf Ubuntu und Windows, prüft die Workflows mit actionlint und führt die
 Privacy-/Secret-Prüfung für jeden Push und Pull Request aus.
 
+`README.md` und `README_de.md` werden mit der App veröffentlicht. `CHANGELOG.md`,
+`PLANUNG.md` und `COMPACTIONS.md` sind lokale Arbeitsdokumente: Sie sind per Git
+ignoriert und werden nie gepusht. `npm run check` prüft die READMEs und, sofern
+die lokalen Dateien vorhanden sind, deren LF-Zeilenenden, Überschriften und den
+Changelog-Abschnitt für die aktuelle `package.json`-Version; der Check schlägt
+außerdem fehl, wenn ein lokales Dokument versioniert wird.
+
 Die Anwendung stellt eine kleine Testfläche als `window.PromptManager` bereit
 (Markdown-Renderer, URL-Sanitizer, Importprüfung, Merge- und Verschiebe-Logik).
 Die Tests laden das echte Inline-Skript aus `prompt-manager.html`; es gibt keine

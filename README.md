@@ -172,6 +172,12 @@ rhysd.actionlint`); `pre-push` fails closed when `gitleaks` is missing. CI runs 
 same tests on Ubuntu and Windows, checks the workflows with actionlint, and runs
 the privacy/secret hook for every push and pull request.
 
+`README.md` and `README_de.md` are published with the app. `CHANGELOG.md`,
+`PLANUNG.md` and `COMPACTIONS.md` are local workspace documents: they are ignored
+by Git and never pushed. `npm run check` validates the READMEs and, when the local
+files exist, their LF endings, headings and the changelog section for the current
+`package.json` version; it also fails if a local document becomes tracked.
+
 The application exposes a small test surface as `window.PromptManager`
 (Markdown renderer, URL sanitizer, import validation, merge and move logic).
 Tests load the real inline script from `prompt-manager.html`; there is no copy

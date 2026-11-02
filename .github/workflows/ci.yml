@@ -3,6 +3,10 @@
 # Kein npm install nötig: package.json enthält keine Laufzeit- oder
 # Entwicklungsabhängigkeiten. Die Suite nutzt ausschließlich Node-Bordmittel
 # (node:test, node:vm).
+#
+# `npm run check` prüft zusätzlich die READMEs und, falls vorhanden, die lokale
+# Projekt-Doku. CHANGELOG.md, PLANUNG.md und COMPACTIONS.md müssen ignoriert
+# bleiben; der Check schlägt fehl, wenn eine davon versioniert wird.
 name: ci
 
 on:
@@ -31,7 +35,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Statische Prüfung
+      - name: Statische Prüfung (App und READMEs)
         run: npm run check
 
       - name: Tests

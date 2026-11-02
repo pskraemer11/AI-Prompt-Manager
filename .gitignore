@@ -15,8 +15,10 @@ node_modules/
 coverage/
 *.log
 
-# =================== Private project docs ===================
-# Personal changelog/compaction notes live in the private workspace
-# (AI+IDE-Hints), never in this public repository.
+# =================== Local project docs ===================
+# Of the documentation, only README.md and README_de.md are published.
+# The changelog, plan and compaction notes stay in the local workspace
+# and are never pushed.
 CHANGELOG.md
+PLANUNG.md
 COMPACTIONS.md

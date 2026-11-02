@@ -138,6 +138,92 @@ if (hooksPresent === hookFiles.length) {
     notes.push('Git-Hooks vorhanden (LF, Shebang)');
 }
 
+// --- Dokumentation ----------------------------------------------------------
+// README.md and README_de.md are published. CHANGELOG.md, PLANUNG.md and
+// COMPACTIONS.md are local workspace documents: present on the author's disk,
+// ignored by Git and never pushed. They are validated only when present.
+const PUBLISHED_DOCS = ['README.md', 'README_de.md'];
+const LOCAL_DOCS = ['CHANGELOG.md', 'PLANUNG.md', 'COMPACTIONS.md'];
+
+const publishedDocs = new Map();
+for (const file of PUBLISHED_DOCS) {
+    try {
+        const content = await readFile(`${ROOT}${file}`, 'utf8');
+        publishedDocs.set(file, content);
+        check(content.trim().length > 0, `${file} ist leer`);
+        check(!content.includes('\r'), `${file} enthält CR (muss LF sein)`);
+    } catch (error) {
+        fail(`${file} fehlt oder ist nicht lesbar: ${error.message}`);
+    }
+}
+
+const localDocs = new Map();
+for (const file of LOCAL_DOCS) {
+    try {
+        const content = await readFile(`${ROOT}${file}`, 'utf8');
+        localDocs.set(file, content);
+        check(content.trim().length > 0, `${file} ist leer`);
+        check(!content.includes('\r'), `${file} enthält CR (muss LF sein)`);
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            fail(`${file} ist nicht lesbar: ${error.message}`);
+        }
+    }
+}
+
+let packageVersion = null;
+try {
+    const packageJson = JSON.parse(await readFile(`${ROOT}package.json`, 'utf8'));
+    packageVersion = packageJson.version;
+    check(typeof packageVersion === 'string' && packageVersion.length > 0, 'package.json hat keine Version');
+} catch (error) {
+    fail(`package.json ist nicht lesbar oder kein gültiges JSON: ${error.message}`);
+}
+
+const changelog = localDocs.get('CHANGELOG.md');
+if (changelog) {
+    check(/^# Changelog[ \t]*$/m.test(changelog), 'CHANGELOG.md beginnt nicht mit "# Changelog"');
+    if (packageVersion) {
+        check(
+            changelog.includes(`## [${packageVersion}]`),
+            `CHANGELOG.md enthält keinen Abschnitt "## [${packageVersion}]"`
+        );
+    }
+}
+
+const planning = localDocs.get('PLANUNG.md');
+if (planning) {
+    check(/^#\s+\S/m.test(planning), 'PLANUNG.md hat keine Überschrift');
+}
+
+const gitignore = await readFile(`${ROOT}.gitignore`, 'utf8');
+for (const file of LOCAL_DOCS) {
+    const pattern = new RegExp(`^${file.replace(/\./g, '\\.')}[ \\t]*$`, 'm');
+    check(pattern.test(gitignore), `.gitignore schützt ${file} nicht vor einer Veröffentlichung`);
+}
+
+try {
+    const tracked = execFileSync('git', ['ls-files', '--', ...LOCAL_DOCS], {
+        cwd: ROOT,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe']
+    }).trim();
+    check(
+        tracked.length === 0,
+        `Lokale Doku ist versioniert und würde veröffentlicht: ${tracked.replace(/\n/g, ', ')}`
+    );
+} catch (error) {
+    // Ohne Git (z. B. Tarball) bleibt die .gitignore-Prüfung als Schutz.
+}
+
+if (publishedDocs.size === PUBLISHED_DOCS.length) {
+    const versionLabel = packageVersion ? `Version ${packageVersion}` : 'Version unbekannt';
+    const localState = localDocs.size > 0
+        ? `lokale Doku: ${[...localDocs.keys()].join(', ')}`
+        : 'keine lokale Doku im Arbeitsbaum';
+    notes.push(`READMEs vorhanden (${versionLabel}); ${localState}`);
+}
+
 // --- Ausgabe ----------------------------------------------------------------
 if (errors.length > 0) {
     console.error(`check: ${errors.length} Problem(e) gefunden`);
