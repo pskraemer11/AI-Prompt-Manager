@@ -36,136 +36,263 @@
 
         SPDX-License-Identifier: GPL-3.0-or-later
     -->
-    <title>Prompt Manager Pro - Optimierte Version</title>
+    <title>Prompt Manager</title>
     <!-- Symbol für Lesezeichen-Leiste und Tab (eingebettet, kein Netzwerkzugriff) -->
     <link rel="icon" type="image/svg+xml"
           href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM0ZjQ2ZTUiLz48dGV4dCB4PSIzMiIgeT0iNDUiIGZvbnQtZmFtaWx5PSJTZWdvZSBVSSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMzQiIGZvbnQtd2VpZ2h0PSI2MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNmZmZmZmYiPlA8L3RleHQ+PC9zdmc+">
     <style>
-        /* Reset und Basis-Styles */
-        * {
+        /* ============================================================
+           Design-Tokens
+           Ruhige, neutrale Flächen, eine Akzentfarbe, Haarlinien statt
+           Schatten. Dark Mode folgt der Systemeinstellung.
+           ============================================================ */
+        :root {
+            color-scheme: light dark;
+
+            --bg: #ffffff;
+            --bg-subtle: #f7f7f8;
+            --bg-elevated: #fbfbfc;
+            --bg-hover: rgba(24, 24, 27, 0.05);
+            --bg-active: rgba(79, 70, 229, 0.10);
+
+            --border: #e4e4e7;
+            --border-strong: #d4d4d8;
+
+            --text: #18181b;
+            --text-muted: #52525b;
+            --text-faint: #71717a;
+
+            --accent: #4f46e5;
+            --accent-hover: #4338ca;
+            --accent-contrast: #ffffff;
+            --accent-soft: rgba(79, 70, 229, 0.12);
+
+            --danger: #dc2626;
+            --danger-soft: rgba(220, 38, 38, 0.08);
+            --danger-border: rgba(220, 38, 38, 0.35);
+            --success: #16a34a;
+            --warning: #b45309;
+
+            --code-bg: #f4f4f5;
+            --code-border: #e4e4e7;
+
+            --shadow: 0 16px 40px rgba(24, 24, 27, 0.16);
+            --radius: 8px;
+            --radius-sm: 6px;
+            --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #17171a;
+                --bg-subtle: #111113;
+                --bg-elevated: #1d1d21;
+                --bg-hover: rgba(255, 255, 255, 0.05);
+                --bg-active: rgba(139, 147, 255, 0.14);
+
+                --border: #2a2a2f;
+                --border-strong: #3f3f46;
+
+                --text: #ededf0;
+                --text-muted: #a1a1aa;
+                --text-faint: #8b8b95;
+
+                --accent: #8b93ff;
+                --accent-hover: #a3a9ff;
+                --accent-contrast: #111114;
+                --accent-soft: rgba(139, 147, 255, 0.16);
+
+                --danger: #f87171;
+                --danger-soft: rgba(248, 113, 113, 0.12);
+                --danger-border: rgba(248, 113, 113, 0.4);
+                --success: #4ade80;
+                --warning: #fbbf24;
+
+                --code-bg: #1f1f24;
+                --code-border: #2f2f36;
+
+                --shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+            }
+        }
+
+        /* ============================================================
+           Basis
+           ============================================================ */
+        *,
+        *::before,
+        *::after {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-            line-height: 1.6;
+            font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                "Helvetica Neue", Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.55;
+            color: var(--text);
+            background: var(--bg-subtle);
+            min-height: 100dvh;
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* Container Layout - VERBESSERT: Flexibles Grid statt feste Höhe */
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+            color: inherit;
+        }
+
+        ::selection {
+            background: var(--accent-soft);
+        }
+
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-strong) transparent;
+        }
+
+        :focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        /* ============================================================
+           App-Rahmen: volle Fensterhöhe, keine schwebende Karte
+           ============================================================ */
         .container {
             display: grid;
-            grid-template-columns: 280px 1fr;
-            grid-template-rows: 1fr;
-            gap: 0;
-            height: calc(100vh - 40px);
-            background: white;
-            margin: 20px;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            grid-template-columns: 248px minmax(0, 1fr);
+            height: 100dvh;
             overflow: hidden;
         }
 
-        /* Sidebar - VERBESSERT: Bessere Struktur */
+        /* ============================================================
+           Sidebar
+           ============================================================ */
         .sidebar {
-            background: #f8fafc;
-            border-right: 1px solid #e2e8f0;
             display: flex;
             flex-direction: column;
-            min-height: 0; /* WICHTIG: Verhindert Overflow-Probleme */
+            min-height: 0;
+            background: var(--bg);
+            border-right: 1px solid var(--border);
         }
 
         .sidebar-header {
-            padding: 20px;
-            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 14px 12px 10px;
             flex-shrink: 0;
         }
 
         .logo {
-            font-size: 20px;
-            font-weight: 700;
-            color: #4f46e5;
-            text-align: center;
-            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            color: var(--text);
         }
 
-        /* VERBESSERT: Button mit besserem Feedback */
+        .logo-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 5px;
+            background: var(--accent);
+            color: var(--accent-contrast);
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
         .btn-manage-categories {
-            width: 100%;
-            padding: 8px 12px;
-            background: #e0e7ff;
-            color: #4f46e5;
-            border: none;
-            border-radius: 6px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg);
+            color: var(--text-muted);
+            font-size: 12.5px;
+            cursor: pointer;
+            transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
         }
 
         .btn-manage-categories:hover {
-            background: #4f46e5;
-            color: white;
-            transform: translateY(-1px);
+            background: var(--bg-hover);
+            border-color: var(--border-strong);
+            color: var(--text);
         }
 
-        /* VERBESSERT: Scrollbarer Bereich mit Performance-Optimierung */
         .category-section {
             flex: 1;
+            min-height: 0;
             overflow-y: auto;
-            padding: 15px;
-            /* Performance: Nur sichtbare Elemente rendern */
+            padding: 6px 8px 10px;
             contain: layout style paint;
         }
 
         .category-title {
-            font-size: 11px;
-            font-weight: 600;
-            color: #64748b;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-            letter-spacing: 0.5px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
+            padding: 0 6px;
+            margin: 10px 0 4px;
+            font-size: 10.5px;
+            font-weight: 600;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: var(--text-faint);
         }
 
-        /* VERBESSERT: Kategorie-Items mit besserer Performance */
         .category-item {
             display: flex;
             align-items: center;
-            padding: 10px 12px;
-            margin-bottom: 4px;
-            border-radius: 8px;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            color: var(--text-muted);
             cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
             user-select: none;
+            transition: background-color 0.12s ease, color 0.12s ease;
         }
 
         .category-item:hover {
-            background: #e0e7ff;
-            color: #4f46e5;
+            background: var(--bg-hover);
+            color: var(--text);
         }
 
         .category-item.active {
-            background: #4f46e5;
-            color: white;
+            background: var(--bg-active);
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .category-item.active .category-count {
+            color: inherit;
+            opacity: 0.75;
         }
 
         .category-icon {
-            margin-right: 10px;
-            font-size: 18px;
-            width: 24px;
+            width: 18px;
+            font-size: 14px;
             text-align: center;
             flex-shrink: 0;
+            opacity: 0.85;
         }
 
         .category-name {
@@ -177,18 +304,88 @@
         }
 
         .category-count {
-            margin-left: 8px;
-            background: #e2e8f0;
-            color: #64748b;
-            padding: 2px 8px;
-            border-radius: 12px;
+            margin-left: 6px;
             font-size: 11px;
-            min-width: 24px;
-            text-align: center;
+            color: var(--text-faint);
+            font-variant-numeric: tabular-nums;
             flex-shrink: 0;
         }
 
-        /* Main Content */
+        .sidebar-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            padding: 8px;
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .sidebar-footer .category-title {
+            margin: 4px 6px 6px;
+        }
+
+        .control-item {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 6px 8px;
+            border: 0;
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 13px;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.12s ease, color 0.12s ease;
+        }
+
+        .control-item:hover {
+            background: var(--bg-hover);
+            color: var(--text);
+        }
+
+        .storage-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 6px;
+            padding: 6px 8px;
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            line-height: 1.35;
+            color: var(--text-faint);
+        }
+
+        .storage-status::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-faint);
+            flex-shrink: 0;
+        }
+
+        .storage-status[data-state="active"] {
+            color: var(--text-muted);
+        }
+
+        .storage-status[data-state="active"]::before {
+            background: var(--success);
+        }
+
+        .storage-status[data-state="error"]::before,
+        .storage-status[data-state="permission"]::before {
+            background: var(--danger);
+        }
+
+        .storage-status[data-state="loading"]::before,
+        .storage-status[data-state="connecting"]::before {
+            background: var(--warning);
+        }
+
+        /* ============================================================
+           Hauptbereich
+           ============================================================ */
         .main-content {
             display: flex;
             flex-direction: column;
@@ -197,156 +394,199 @@
         }
 
         .header {
-            padding: 20px 25px;
-            background: white;
-            border-bottom: 1px solid #e2e8f0;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 16px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
             flex-wrap: wrap;
-            gap: 15px;
             flex-shrink: 0;
         }
 
         .search-container {
             position: relative;
             flex: 1;
-            max-width: 400px;
-            min-width: 200px;
+            max-width: 420px;
+            min-width: 180px;
         }
 
         .search-input {
             width: 100%;
-            padding: 12px 45px 12px 15px;
-            border: 2px solid #e2e8f0;
-            border-radius: 25px;
-            font-size: 14px;
-            transition: border-color 0.2s ease;
+            padding: 7px 10px 7px 30px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-subtle);
+            color: var(--text);
+            font-size: 13px;
+            transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-faint);
         }
 
         .search-input:focus {
             outline: none;
-            border-color: #4f46e5;
+            background: var(--bg);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            display: flex;
+            align-items: center;
+            transform: translateY(-50%);
+            opacity: 0.55;
+            pointer-events: none;
         }
 
         .action-buttons {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
         }
 
+        /* ============================================================
+           Buttons
+           ============================================================ */
         .btn {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 6px;
-            text-decoration: none;
+            padding: 6px 12px;
+            border: 1px solid transparent;
+            border-radius: var(--radius-sm);
+            background: transparent;
+            font-size: 13px;
+            font-weight: 500;
             white-space: nowrap;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+        }
+
+        .btn:disabled,
+        .btn[disabled] {
+            opacity: 0.45;
+            cursor: not-allowed;
         }
 
         .btn-primary {
-            background: #4f46e5;
-            color: white;
+            background: var(--accent);
+            color: var(--accent-contrast);
         }
 
-        .btn-primary:hover {
-            background: #4338ca;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-hover);
         }
 
         .btn-secondary {
-            background: #f1f5f9;
-            color: #64748b;
+            background: var(--bg);
+            color: var(--text);
+            border-color: var(--border);
         }
 
-        .btn-secondary:hover {
-            background: #e2e8f0;
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--bg-hover);
+            border-color: var(--border-strong);
         }
 
         .btn-danger {
-            background: #fee2e2;
-            color: #ef4444;
+            background: transparent;
+            color: var(--danger);
+            border-color: var(--border);
         }
 
-        .btn-danger:hover {
-            background: #fecaca;
+        .btn-danger:hover:not(:disabled) {
+            background: var(--danger-soft);
+            border-color: var(--danger-border);
         }
 
         .btn-small {
-            padding: 6px 12px;
+            padding: 4px 9px;
             font-size: 12px;
         }
 
+        /* ============================================================
+           Inhalt und Prompt-Karten
+           ============================================================ */
         .content-area {
             flex: 1;
-            padding: 25px;
+            min-height: 0;
+            padding: 16px;
             overflow-y: auto;
-            background: #fafafa;
-            /* Performance-Optimierung für große Listen */
+            background: var(--bg-subtle);
             contain: layout style paint;
         }
 
         .prompt-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
         }
 
         .prompt-card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
             cursor: pointer;
-            border: 1px solid #e2e8f0;
-            position: relative;
+            transition: background-color 0.12s ease, border-color 0.12s ease;
         }
 
         .prompt-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            background: var(--bg-elevated);
+            border-color: var(--border-strong);
+        }
+
+        .prompt-card:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
         }
 
         .prompt-header {
             display: flex;
-            justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 12px;
+            justify-content: space-between;
             gap: 10px;
         }
 
+        .prompt-title-wrap {
+            min-width: 0;
+        }
+
         .prompt-title {
-            font-size: 16px;
+            font-size: 13.5px;
             font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 4px;
-            line-height: 1.3;
+            line-height: 1.35;
+            color: var(--text);
             word-break: break-word;
         }
 
         .prompt-category {
-            font-size: 11px;
-            padding: 4px 10px;
-            border-radius: 20px;
-            white-space: nowrap;
             flex-shrink: 0;
-            background: #e0e7ff;
-            color: #4f46e5;
+            padding: 2px 8px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: var(--bg-subtle);
+            color: var(--text-muted);
+            font-size: 11px;
+            white-space: nowrap;
         }
 
         .prompt-content {
-            color: #64748b;
-            font-size: 14px;
+            color: var(--text-muted);
+            font-size: 12.5px;
             line-height: 1.5;
-            margin-bottom: 15px;
             display: -webkit-box;
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
@@ -355,153 +595,252 @@
 
         .prompt-meta {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            font-size: 12px;
-            color: #94a3b8;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: auto;
+            font-size: 11px;
+            color: var(--text-faint);
         }
 
         .prompt-tags {
             display: flex;
-            gap: 5px;
+            gap: 4px;
             flex-wrap: wrap;
         }
 
         .tag {
-            background: #f1f5f9;
-            color: #475569;
-            padding: 3px 8px;
+            padding: 1px 6px;
+            border: 1px solid var(--border);
             border-radius: 4px;
+            background: var(--bg-subtle);
+            color: var(--text-muted);
             font-size: 11px;
         }
 
-        /* Modal-Styles - VERBESSERT: Bessere Performance */
+        /* ============================================================
+           Leerer Zustand
+           ============================================================ */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 64px 20px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .empty-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .empty-state p {
+            max-width: 400px;
+            font-size: 12.5px;
+            color: var(--text-muted);
+        }
+
+        .empty-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        /* ============================================================
+           Hinweis zum Browser-Speicher
+           ============================================================ */
+        .storage-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            border-left: 2px solid var(--warning);
+            background: var(--bg);
+        }
+
+        .storage-banner-text {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            min-width: 240px;
+            font-size: 12.5px;
+            color: var(--text-muted);
+        }
+
+        .storage-banner-text strong {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .storage-banner-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* ============================================================
+           Modals
+           ============================================================ */
         .modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
+            inset: 0;
             z-index: 1000;
             overflow-y: auto;
-            /* Performance: GPU-Beschleunigung */
-            will-change: opacity;
+            padding: 24px 16px 40px;
+            background: rgba(9, 9, 11, 0.45);
         }
 
         .modal.open {
             display: block;
         }
 
-        [hidden] {
-            display: none !important;
-        }
-
         .modal-content {
             position: relative;
-            background: white;
-            margin: 50px auto;
-            border-radius: 15px;
-            padding: 30px;
-            width: 90%;
-            max-width: 600px;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-            /* Performance: Bessere Animation */
-            transform: translateZ(0);
+            width: 100%;
+            max-width: 620px;
+            margin: 4vh auto 0;
+            padding: 20px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
         }
 
         .modal-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f1f5f9;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
         }
 
         .modal-title {
-            font-size: 22px;
+            font-size: 15px;
             font-weight: 600;
-            color: #1e293b;
+            color: var(--text);
         }
 
         .close-btn {
-            background: none;
-            border: none;
-            font-size: 28px;
-            cursor: pointer;
-            color: #94a3b8;
-            line-height: 1;
-            padding: 0;
-            width: 36px;
-            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
-            transition: all 0.2s;
+            width: 28px;
+            height: 28px;
+            border: 0;
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text-faint);
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+            transition: background-color 0.12s ease, color 0.12s ease;
         }
 
         .close-btn:hover {
-            background: #f1f5f9;
-            color: #374151;
+            background: var(--bg-hover);
+            color: var(--text);
         }
 
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        /* ============================================================
+           Formulare
+           ============================================================ */
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 14px;
         }
 
         .form-label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+            font-size: 12px;
             font-weight: 500;
-            color: #374151;
-            font-size: 14px;
+            color: var(--text-muted);
         }
 
-        .form-input, .form-textarea, .form-select {
+        .form-input,
+        .form-textarea,
+        .form-select {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.2s ease;
+            padding: 7px 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 13px;
+            transition: border-color 0.12s ease, box-shadow 0.12s ease;
         }
 
-        .form-input:focus, .form-textarea:focus, .form-select:focus {
+        .form-input::placeholder,
+        .form-textarea::placeholder {
+            color: var(--text-faint);
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
             outline: none;
-            border-color: #4f46e5;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
         }
 
         .form-textarea {
             resize: vertical;
             min-height: 120px;
+            font-family: var(--font-mono);
+            font-size: 12.5px;
+            line-height: 1.55;
         }
 
-        /* Markdown-Vorschau und Markdown-Inhalte (Stil angelehnt an GitHub) */
         .label-row {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .label-row .form-label {
+            margin-bottom: 0;
         }
 
         .form-hint {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 400;
-            color: #94a3b8;
+            color: var(--text-faint);
         }
 
+        /* ============================================================
+           Markdown
+           ============================================================ */
         .markdown-preview {
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 15px;
-            background: #fafafa;
-            max-height: 300px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-subtle);
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1.6;
+            min-height: 60px;
+            max-height: 320px;
             overflow-y: auto;
-            font-size: 14px;
-            color: #374151;
         }
 
         .markdown-body {
@@ -509,78 +848,112 @@
             word-wrap: break-word;
         }
 
-        .markdown-body h1, .markdown-body h2, .markdown-body h3,
-        .markdown-body h4, .markdown-body h5, .markdown-body h6 {
+        .markdown-body h1,
+        .markdown-body h2,
+        .markdown-body h3,
+        .markdown-body h4,
+        .markdown-body h5,
+        .markdown-body h6 {
+            margin: 0.9em 0 0.4em;
             font-weight: 600;
-            margin: 0.8em 0 0.4em;
-            color: #1e293b;
             line-height: 1.3;
+            color: var(--text);
         }
 
-        .markdown-body h1 { font-size: 1.5em; }
-        .markdown-body h2 { font-size: 1.3em; }
-        .markdown-body h3 { font-size: 1.15em; }
-        .markdown-body h4, .markdown-body h5, .markdown-body h6 { font-size: 1em; }
+        .markdown-body h1:first-child,
+        .markdown-body h2:first-child,
+        .markdown-body h3:first-child,
+        .markdown-body p:first-child {
+            margin-top: 0;
+        }
+
+        .markdown-body h1 { font-size: 1.4em; }
+        .markdown-body h2 { font-size: 1.25em; }
+        .markdown-body h3 { font-size: 1.12em; }
+        .markdown-body h4,
+        .markdown-body h5,
+        .markdown-body h6 { font-size: 1em; }
 
         .markdown-body p { margin: 0.5em 0; }
 
-        .markdown-body ul, .markdown-body ol {
+        .markdown-body ul,
+        .markdown-body ol {
             margin: 0.5em 0;
-            padding-left: 1.6em;
+            padding-left: 1.5em;
         }
 
         .markdown-body blockquote {
-            margin: 0.5em 0;
-            padding: 2px 12px;
-            border-left: 4px solid #d0d7de;
-            color: #57606a;
+            margin: 0.6em 0;
+            padding: 2px 10px;
+            border-left: 2px solid var(--border-strong);
+            color: var(--text-muted);
         }
 
         .markdown-body code {
-            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-family: var(--font-mono);
             font-size: 0.9em;
-            background: #eef2f7;
-            padding: 2px 5px;
+            padding: 1px 4px;
+            border: 1px solid var(--code-border);
             border-radius: 4px;
+            background: var(--code-bg);
         }
 
         .markdown-body pre {
-            background: #f6f8fa;
-            border-radius: 6px;
+            margin: 0.6em 0;
             padding: 10px 12px;
+            border: 1px solid var(--code-border);
+            border-radius: var(--radius-sm);
+            background: var(--code-bg);
             overflow-x: auto;
-            margin: 0.5em 0;
         }
 
         .markdown-body pre code {
-            background: none;
+            border: 0;
             padding: 0;
+            background: none;
+            font-size: 12px;
         }
 
         .markdown-body table {
             border-collapse: collapse;
-            margin: 0.5em 0;
+            margin: 0.6em 0;
+            font-size: 12.5px;
         }
 
-        .markdown-body th, .markdown-body td {
-            border: 1px solid #d0d7de;
+        .markdown-body th,
+        .markdown-body td {
+            border: 1px solid var(--border);
             padding: 4px 10px;
+            text-align: left;
         }
 
-        .markdown-body th { background: #f6f8fa; }
+        .markdown-body th {
+            background: var(--bg-hover);
+            font-weight: 600;
+        }
 
-        .markdown-body a { color: #4f46e5; }
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .markdown-body a:hover {
+            text-decoration: underline;
+        }
 
         .markdown-body hr {
             border: none;
-            border-top: 2px solid #e2e8f0;
+            border-top: 1px solid var(--border);
             margin: 1em 0;
         }
 
-        .markdown-body del { color: #94a3b8; }
+        .markdown-body del {
+            color: var(--text-faint);
+        }
 
         .markdown-body img {
             max-width: 100%;
+            border-radius: var(--radius-sm);
         }
 
         .markdown-body li.task {
@@ -588,132 +961,56 @@
             margin-left: -1.2em;
         }
 
-        /* Notification */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #10b981;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-            z-index: 2000;
-            max-width: 300px;
+        /* ============================================================
+           Detailansicht
+           ============================================================ */
+        .detail-header {
+            margin-bottom: 12px;
         }
 
-        .notification.show {
-            transform: translateX(0);
-        }
-
-        .notification.error {
-            background: #ef4444;
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #94a3b8;
-        }
-
-        .empty-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-            opacity: 0.5;
-        }
-
-        .empty-title {
-            font-size: 20px;
-            margin-bottom: 10px;
-            color: #64748b;
-        }
-
-        .empty-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 20px;
-        }
-
-        /* Dauerhafter Speicher */
-        .storage-banner {
-            display: flex;
-            gap: 16px;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            margin: 16px 20px 0;
-            padding: 12px 16px;
-            border: 1px solid #fcd34d;
-            background: #fffbeb;
-            color: #92400e;
-            border-radius: 10px;
-            font-size: 13px;
-        }
-
-        .storage-banner-text {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            min-width: 240px;
-        }
-
-        .storage-banner-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .storage-status {
-            margin-top: 10px;
-            padding: 6px 8px;
-            border-radius: 6px;
-            background: #eef2f7;
-            color: #475569;
-            font-size: 11px;
-            line-height: 1.35;
-        }
-
-        .storage-status[data-state="active"] {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .storage-status[data-state="error"],
-        .storage-status[data-state="permission"] {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        /* Detailansicht */
         .detail-category {
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            background: #e0e7ff;
-            color: #4f46e5;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 13px;
+            padding: 2px 8px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: var(--bg-subtle);
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .detail-body {
+            padding: 14px;
+            margin-bottom: 14px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .detail-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .detail-meta {
+            color: var(--text-faint);
+            font-size: 11px;
         }
 
         .move-row {
-            margin: 0 0 18px;
-            padding: 14px;
-            background: #f8fafc;
-            border-radius: 10px;
+            margin-bottom: 16px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-subtle);
         }
 
         .move-controls {
             display: flex;
-            gap: 10px;
             align-items: center;
-            margin-top: 6px;
+            gap: 8px;
         }
 
         .move-controls .form-select {
@@ -721,63 +1018,244 @@
             margin-bottom: 0;
         }
 
-        /* Kategorie-Bearbeitung */
+        /* ============================================================
+           Kategorie-Verwaltung
+           ============================================================ */
+        .notice {
+            padding: 8px 10px;
+            margin-bottom: 14px;
+            border: 1px solid var(--border);
+            border-left: 2px solid var(--warning);
+            border-radius: var(--radius-sm);
+            background: var(--bg-subtle);
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .notice strong {
+            color: var(--text);
+        }
+
+        .panel {
+            padding: 14px;
+            margin-bottom: 18px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg-subtle);
+        }
+
+        .panel-title {
+            margin-bottom: 10px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .panel-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .panel-row .form-group {
+            margin-bottom: 0;
+        }
+
+        .category-list {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .category-list-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .category-list-item:last-child {
+            border-bottom: 0;
+        }
+
+        .category-icon-display {
+            width: 20px;
+            font-size: 15px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .category-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .category-name-display {
+            font-size: 13px;
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .category-prompt-count {
+            font-size: 11px;
+            color: var(--text-faint);
+        }
+
+        .category-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
         .category-edit {
             display: flex;
-            gap: 8px;
             align-items: center;
-            flex-wrap: wrap;
+            gap: 6px;
+            width: 100%;
         }
 
         .category-edit .form-input {
             flex: 1;
-            min-width: 160px;
+            min-width: 120px;
+            padding: 4px 8px;
         }
 
-        /* Nicht geladene bzw. blockierte Markdown-Ziele */
+        /* ============================================================
+           Hilfe
+           ============================================================ */
+        .help {
+            color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1.65;
+        }
+
+        .help h4 {
+            margin: 18px 0 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .help h4:first-child {
+            margin-top: 0;
+        }
+
+        .help ul {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            margin: 0 0 4px 18px;
+        }
+
+        .help p {
+            margin-bottom: 8px;
+        }
+
+        .help strong {
+            color: var(--text);
+        }
+
+        .help code {
+            padding: 1px 4px;
+            border: 1px solid var(--code-border);
+            border-radius: 4px;
+            background: var(--code-bg);
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+        }
+
+        /* ============================================================
+           Benachrichtigung
+           ============================================================ */
+        .notification {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 2000;
+            max-width: 340px;
+            padding: 9px 14px;
+            border-radius: var(--radius-sm);
+            background: var(--text);
+            color: var(--bg);
+            font-size: 12.5px;
+            box-shadow: var(--shadow);
+            opacity: 0;
+            transform: translateY(-6px);
+            transition: opacity 0.16s ease, transform 0.16s ease;
+            pointer-events: none;
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: none;
+        }
+
+        .notification.error {
+            background: var(--danger);
+            color: #ffffff;
+        }
+
+        /* ============================================================
+           Markdown-Ziele
+           ============================================================ */
         .blocked-link {
-            color: #b45309;
+            color: var(--warning);
             text-decoration: line-through dotted;
         }
 
         .external-hint {
-            color: #94a3b8;
+            color: var(--text-faint);
             font-size: 0.85em;
         }
 
-        /* Responsive Design - VERBESSERT: Bessere Breakpoints */
-        @media (max-width: 768px) {
+        /* ============================================================
+           Responsive
+           ============================================================ */
+        @media (max-width: 860px) {
             .container {
                 grid-template-columns: 1fr;
-                grid-template-rows: auto 1fr;
-                height: calc(100vh - 20px);
-                margin: 10px;
+                grid-template-rows: auto minmax(0, 1fr);
             }
-            
+
             .sidebar {
-                max-height: 200px;
-                overflow-y: auto;
+                max-height: 42vh;
+                border-right: 0;
+                border-bottom: 1px solid var(--border);
             }
-            
-            .prompt-grid {
-                grid-template-columns: 1fr;
-            }
-            
+
             .header {
                 flex-direction: column;
                 align-items: stretch;
             }
-            
+
             .search-container {
-                max-width: 100%;
+                max-width: none;
             }
-            
+
             .action-buttons {
-                justify-content: center;
+                justify-content: flex-start;
+            }
+
+            .prompt-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                margin-top: 0;
+                padding: 16px;
             }
         }
 
-        /* Performance: Reduzierte Animationen bei schwachen Geräten */
         @media (prefers-reduced-motion: reduce) {
             * {
                 animation-duration: 0.01ms !important;
@@ -786,7 +1264,9 @@
             }
         }
 
-        /* Utility Classes */
+        /* ============================================================
+           Utilities
+           ============================================================ */
         .sr-only {
             position: absolute;
             width: 1px;
@@ -798,17 +1278,6 @@
             white-space: nowrap;
             border: 0;
         }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .mt-1 { margin-top: 0.25rem; }
-        .mt-2 { margin-top: 0.5rem; }
-        .mt-3 { margin-top: 1rem; }
-        .mb-1 { margin-bottom: 0.25rem; }
-        .mb-2 { margin-bottom: 0.5rem; }
-        .mb-3 { margin-bottom: 1rem; }
     </style>
 </head>
 <body>
@@ -822,9 +1291,9 @@
         <!-- SIDEBAR: Navigation und Kategorien -->
         <aside class="sidebar" role="navigation" aria-label="Hauptnavigation">
             <div class="sidebar-header">
-                <h1 class="logo">🚀 Prompt Manager</h1>
+                <h1 class="logo"><span class="logo-mark" aria-hidden="true">P</span> Prompt Manager</h1>
                 <button class="btn-manage-categories" onclick="showCategoryManager()" aria-label="Kategorien verwalten">
-                    ⚙️ Kategorien
+                    Kategorien
                 </button>
             </div>
             
@@ -835,16 +1304,16 @@
             <div class="sidebar-footer">
                 <div class="category-title">Verwaltung</div>
                 <button class="control-item" onclick="exportData()" aria-label="Daten exportieren">
-                    📤 Export
+                    Export
                 </button>
                 <button class="control-item" onclick="importData()" aria-label="Daten importieren">
-                    📥 Import
+                    Import
                 </button>
                 <button class="control-item" id="connectFileBtn" onclick="handleBackupButton()" aria-label="Datei-Backup verbinden oder fortschreiben">
-                    📁 Backup-Datei
+                    Backup-Datei
                 </button>
                 <button class="control-item" onclick="showHelp()" aria-label="Hilfe anzeigen">
-                    ❓ Hilfe
+                    Hilfe
                 </button>
                 <div class="storage-status" id="storageStatus" role="status" aria-live="polite">
                     Nur Browser-Speicher
@@ -858,14 +1327,20 @@
                 <div class="search-container">
                     <label for="searchInput" class="sr-only">Prompts durchsuchen</label>
                     <input type="text" id="searchInput" class="search-input" placeholder="Prompts durchsuchen..." aria-label="Suchfeld">
-                    <span class="search-icon" aria-hidden="true">🔍</span>
+                    <span class="search-icon" aria-hidden="true">
+                        <svg viewBox="0 0 16 16" width="13" height="13" fill="none"
+                             stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                            <circle cx="7" cy="7" r="4.5"></circle>
+                            <path d="M10.5 10.5 14 14"></path>
+                        </svg>
+                    </span>
                 </div>
                 <div class="action-buttons">
                     <button class="btn btn-secondary" onclick="showImportHFModal()" aria-label="Chatverlauf einfügen">
-                        📋 Chatverlauf einfügen
+                        Chat einfügen
                     </button>
                     <button class="btn btn-primary" onclick="showAddModal()" aria-label="Neuen Prompt erstellen">
-                        ➕ Neuer Prompt
+                        Neuer Prompt
                     </button>
                 </div>
             </header>
@@ -897,12 +1372,11 @@
                 </div>
                 
                 <div class="empty-state" id="emptyState" hidden>
-                    <div class="empty-icon" aria-hidden="true">📝</div>
                     <div class="empty-title">Noch keine Prompts vorhanden</div>
                     <p>Erstelle deinen ersten Prompt, importiere Chatverläufe oder stelle ein Backup wieder her.</p>
                     <div class="empty-actions">
-                        <button class="btn btn-primary" onclick="showAddModal()">➕ Ersten Prompt erstellen</button>
-                        <button class="btn btn-secondary" onclick="importData()">📥 Backup importieren</button>
+                        <button class="btn btn-primary" onclick="showAddModal()">Ersten Prompt erstellen</button>
+                        <button class="btn btn-secondary" onclick="importData()">Backup importieren</button>
                     </div>
                 </div>
             </div>
@@ -935,7 +1409,7 @@
                 </div>
                 <div class="form-group">
                     <div class="label-row">
-                        <label class="form-label" style="margin-bottom: 0;">Markdown-Vorschau <span class="form-hint">Formatierungen werden als solche gerendert</span></label>
+                        <label class="form-label">Markdown-Vorschau <span class="form-hint">Formatierungen werden als solche gerendert</span></label>
                         <button type="button" id="previewToggle" class="btn btn-secondary btn-small" aria-pressed="true">Vorschau ausblenden</button>
                     </div>
                     <div id="markdownPreview" class="markdown-preview markdown-body" role="region" aria-label="Markdown-Vorschau"></div>
@@ -944,7 +1418,7 @@
                     <label for="promptTags" class="form-label">Tags (kommagetrennt)</label>
                     <input type="text" id="promptTags" class="form-input" placeholder="z.B. python, automation, ki">
                 </div>
-                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addModal')">Abbrechen</button>
                     <button type="submit" class="btn btn-primary">Speichern</button>
                 </div>
@@ -961,15 +1435,15 @@
             </div>
             
             <!-- INFO: Sicherheitshinweis für Benutzer -->
-            <div style="background: #fef3c7; padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; color: #92400e;">
-                <strong>💡 Hinweis:</strong> Kategorien mit zugeordneten Prompts können nicht gelöscht werden.
+            <div class="notice">
+                <strong>Hinweis:</strong> Kategorien mit zugeordneten Prompts können nicht gelöscht werden.
             </div>
 
             <!-- Formular: Neue Kategorie -->
-            <div style="margin-bottom: 25px; padding: 20px; background: #f8fafc; border-radius: 10px;">
-                <h4 style="margin-bottom: 15px; color: #374151;">Neue Kategorie erstellen</h4>
-                <div style="display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: end;">
-                    <div class="form-group" style="margin-bottom: 0;">
+            <div class="panel">
+                <h4 class="panel-title">Neue Kategorie erstellen</h4>
+                <div class="panel-row">
+                    <div class="form-group">
                         <label for="newCategoryName" class="form-label">Name *</label>
                         <input type="text" id="newCategoryName" class="form-input" placeholder="z.B. Recht, Gesundheit, Bildung">
                     </div>
@@ -997,7 +1471,7 @@
             </div>
             <div class="form-group">
                 <div class="label-row">
-                    <label class="form-label" style="margin-bottom: 0;">Markdown-Vorschau <span class="form-hint">Formatierungen werden als solche gerendert</span></label>
+                    <label class="form-label">Markdown-Vorschau <span class="form-hint">Formatierungen werden als solche gerendert</span></label>
                     <button type="button" id="chatPreviewToggle" class="btn btn-secondary btn-small" aria-pressed="true">Vorschau ausblenden</button>
                 </div>
                 <div id="chatMarkdownPreview" class="markdown-preview markdown-body" role="region" aria-label="Markdown-Vorschau"></div>
@@ -1008,7 +1482,7 @@
                     <!-- Optionen werden dynamisch gefüllt -->
                 </select>
             </div>
-            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <div class="modal-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('importHFModal')">Abbrechen</button>
                 <button type="button" class="btn btn-primary" onclick="importHFChat()">Importieren</button>
             </div>
@@ -1028,14 +1502,14 @@
                 <div class="move-controls">
                     <select id="moveCategorySelect" class="form-select"></select>
                     <button type="button" class="btn btn-secondary" onclick="moveCurrentPrompt()">
-                        📁 Verschieben
+                        Verschieben
                     </button>
                 </div>
             </div>
-            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
-                <button class="btn btn-secondary" onclick="copyPrompt()">📋 Kopieren</button>
-                <button class="btn btn-primary" onclick="editCurrentPrompt()">✏️ Bearbeiten</button>
-                <button class="btn btn-danger" onclick="deleteCurrentPrompt()">🗑️ Löschen</button>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="copyPrompt()">Kopieren</button>
+                <button class="btn btn-primary" onclick="editCurrentPrompt()">Bearbeiten</button>
+                <button class="btn btn-danger" onclick="deleteCurrentPrompt()">Löschen</button>
             </div>
         </div>
     </div>
@@ -1047,16 +1521,16 @@
                 <h3 class="modal-title" id="helpModalTitle">Hilfe & Tipps</h3>
                 <button class="close-btn" onclick="closeModal('helpModal')" aria-label="Modal schließen">&times;</button>
             </div>
-            <div style="line-height: 1.6; color: #374151;">
-                <h4 style="margin-bottom: 10px; color: #1e293b;">🎯 Wichtige Funktionen</h4>
-                <ul style="margin-left: 20px; margin-bottom: 20px;">
+            <div class="help">
+                <h4>Wichtige Funktionen</h4>
+                <ul>
                     <li><strong>Kategorien verwalten:</strong> Kategorien anlegen, umbenennen und Prompts über die Detailansicht verschieben</li>
                     <li><strong>Neue Prompts einfügen:</strong> Nutze das "+" Symbol für neue Prompts</li>
                     <li><strong>Chat einfügen:</strong> Füge einen Chatverlauf ein; Markdown wird live geprüft</li>
                     <li><strong>Import:</strong> Bestehende Daten bleiben erhalten, Doppelungen werden übersprungen</li>
                     <li><strong>Backup:</strong> Exportiere JSON oder verbinde eine Backup-Datei, die automatisch fortgeschrieben wird</li>
                 </ul>
-                <h4 style="margin-bottom: 10px; color: #1e293b;">💾 Datensicherheit</h4>
+                <h4>Datensicherheit</h4>
                 <p>Alle Daten werden <strong>lokal in deinem Browser</strong> gespeichert. Browser-Einstellungen,
                 die Website-Daten beim Schließen löschen, entfernen auch diesen Speicher.</p>
                 <p>Deshalb: <strong>Backup-Datei verbinden</strong> (Chrome, Edge, Chromium) oder regelmäßig
@@ -1071,7 +1545,7 @@
                 <p><strong>Wichtig:</strong> Datei und Server sind getrennte Speicher. Nutze dauerhaft
                 denselben Einstieg – am einfachsten das Lesezeichen auf <code>http://127.0.0.1:8765/</code>.
                 Daten aus der Datei lassen sich jederzeit über <strong>Import</strong> in den Server übernehmen.</p>
-                <h4 style="margin-bottom: 10px; color: #1e293b;">🔒 Offline und Sicherheit</h4>
+                <h4>Offline und Sicherheit</h4>
                 <p>Die Anwendung lädt nichts aus dem Internet. Externe Bilder in Markdown werden nicht
                 geladen, sondern als Link angezeigt. Links werden nur nach einem Klick geöffnet.</p>
             </div>
@@ -1654,19 +2128,19 @@
             const button = document.getElementById('connectFileBtn');
             if (button) {
                 if (serverBackup.status === 'active') {
-                    button.textContent = '💾 Server-Backup jetzt schreiben';
+                    button.textContent = 'Server-Backup jetzt schreiben';
                 } else if (serverBackup.status === 'loading') {
-                    button.textContent = '⏳ Server-Backup wird geladen';
+                    button.textContent = 'Server-Backup wird geladen';
                 } else if (serverBackup.status === 'error') {
-                    button.textContent = '🔄 Server-Backup erneut';
+                    button.textContent = 'Server-Backup erneut';
                 } else if (!isFileBackupSupported()) {
-                    button.textContent = '📥 Backup exportieren';
+                    button.textContent = 'Backup exportieren';
                 } else if (fileBackup.status === 'active') {
-                    button.textContent = '💾 Backup jetzt schreiben';
+                    button.textContent = 'Backup jetzt schreiben';
                 } else if (fileBackup.handle) {
-                    button.textContent = '📁 Backup fortsetzen';
+                    button.textContent = 'Backup fortsetzen';
                 } else {
-                    button.textContent = '📁 Backup-Datei';
+                    button.textContent = 'Backup-Datei';
                 }
             }
 
@@ -2724,7 +3198,7 @@
             const tags = Array.isArray(prompt.tags) ? prompt.tags : [];
             element.innerHTML = `
                 <div class="prompt-header">
-                    <div style="min-width: 0;">
+                    <div class="prompt-title-wrap">
                         <div class="prompt-title" title="${escapeHtml(prompt.title)}">${escapeHtml(prompt.title)}</div>
                     </div>
                     <div class="prompt-category">
@@ -2869,7 +3343,6 @@
                     if (promptCount > 0) {
                         deleteButton.disabled = true;
                         deleteButton.title = 'Zuerst Prompts in eine andere Kategorie verschieben';
-                        deleteButton.style.opacity = '0.5';
                     } else {
                         deleteButton.addEventListener('click', () => deleteCategory(category.id));
                     }
@@ -3067,18 +3540,18 @@
 
             const tags = Array.isArray(prompt.tags) ? prompt.tags : [];
             content.innerHTML = `
-                <div style="margin-bottom: 15px;">
+                <div class="detail-header">
                     <span class="detail-category">
                         ${escapeHtml(category.icon)} ${escapeHtml(category.name)}
                     </span>
                 </div>
-                <div class="markdown-preview markdown-body" style="border-left: 4px solid #4f46e5; background: #f8fafc; padding: 20px; margin-bottom: 20px; max-height: 60vh;">
+                <div class="markdown-preview markdown-body detail-body">
                     ${renderMarkdown(prompt.content)}
                 </div>
-                <div style="margin-bottom: 15px;">
-                    ${tags.map((tag) => `<span class="tag" style="font-size: 13px; padding: 4px 10px;">${escapeHtml(tag)}</span>`).join(' ')}
+                <div class="detail-tags">
+                    ${tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join(' ')}
                 </div>
-                <div style="color: #94a3b8; font-size: 12px;">
+                <div class="detail-meta">
                     Erstellt: ${new Date(prompt.createdAt).toLocaleString('de-DE')} |
                     Zuletzt bearbeitet: ${new Date(prompt.updatedAt).toLocaleString('de-DE')}
                 </div>
