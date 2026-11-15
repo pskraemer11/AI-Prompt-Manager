@@ -74,7 +74,66 @@ if [ -n "$_violations" ]; then
   exit 1
 fi
 
-# --- 3) Test-Gate (optional, pro Repo konfiguriert) -------------------------
+# --- 3) Skill-Urteilsdatei (Bring-Schuld des Skill-Repos, 05.11.2026) ------
+# Nur im Skill-Repo vorhanden: dort liegen references/scripts/skill-verdicts.mjs
+# und skill-reviews/verdicts.json. Sind Skill-Dateien gestaged, wird die
+# Urteilsdatei aus dem Arbeitsbaum neu berechnet und mitgestaged.
+#
+# Zwei Faelle werden abgelehnt, weil die Datei sonst einen Stand beschriebe,
+# der nicht im Commit ist: nicht versionierte Python-Dateien unter skills/ und
+# Python-Aenderungen, die noch nicht gestaged sind. Andere Dateitypen gehen
+# nicht in die Hashes ein und blockieren deshalb nicht.
+#
+# Eine Freigabe bleibt nur bei unveraenderten Hashes bestehen; sonst faellt
+# der Eintrag sichtbar auf "ask" zurueck (Zeile "zurueckgesetzt").
+_verdicts_tool="references/scripts/skill-verdicts.mjs"
+_verdicts_db="skill-reviews/verdicts.json"
+if [ -f "$_verdicts_tool" ] && [ -f "$_verdicts_db" ] \
+   && git diff --cached --name-only --diff-filter=ACMRD -- skills/ | grep -q .; then
+  if ! command -v node >/dev/null 2>&1; then
+    echo "" >&2
+    echo "COMMIT BLOCKIERT - node fehlt, Urteilsdatei kann nicht geprueft werden." >&2
+    exit 1
+  fi
+
+  _untracked=$(git ls-files --others --exclude-standard -- skills/ | grep -E '[.]py$' | head -n 5)
+  if [ -n "$_untracked" ]; then
+    echo "" >&2
+    echo "COMMIT BLOCKIERT - nicht versionierte Python-Dateien unter skills/." >&2
+    printf '%s\n' "$_untracked" | sed 's/^/  /' >&2
+    echo "  Sie gehoeren nicht zum Commit, wuerden aber in die Hashes eingehen." >&2
+    echo "  Naechster Schritt: git add skills/ oder die Dateien ignorieren." >&2
+    exit 1
+  fi
+
+  _unstaged=$(git diff --name-only -- skills/ | grep -E '[.]py$' | head -n 5)
+  if [ -n "$_unstaged" ]; then
+    echo "" >&2
+    echo "COMMIT BLOCKIERT - Python-Aenderungen unter skills/ sind nicht vollstaendig gestaged." >&2
+    printf '%s\n' "$_unstaged" | sed 's/^/  /' >&2
+    echo "  Die Urteilsdatei wuerde sonst einen Stand beschreiben, der nicht im Commit ist." >&2
+    echo "  Naechster Schritt: git add skills/" >&2
+    exit 1
+  fi
+
+  node "$_verdicts_tool" --refresh --skills skills --out "$_verdicts_db" --write
+  if [ $? -ne 0 ]; then
+    echo "" >&2
+    echo "COMMIT BLOCKIERT - Urteilsdatei konnte nicht aktualisiert werden." >&2
+    exit 1
+  fi
+  git add "$_verdicts_db"
+fi
+
+# --- 3b) Projektlokaler Zusatz (optional) ----------------------------------
+# Die Datei ist projektspezifisch und nicht Teil dieser Vorlage. Sie laeuft
+# nach den gemeinsamen Pruefungen und vor dem Test-Gate, damit erzeugte
+# Dateien noch in denselben Commit wandern koennen.
+if [ -f .githooks/pre-commit.local ]; then
+  . .githooks/pre-commit.local || exit 1
+fi
+
+# --- 4) Test-Gate (optional, pro Repo konfiguriert) -------------------------
 # Gesteuert ueber .githooks/test-gate.conf im Repo, ein Schluessel=Wert je
 # Zeile ('#' beginnt einen Kommentar):
 #
@@ -93,6 +152,20 @@ _gate_conf=".githooks/test-gate.conf"
 if [ "${GITHOOKS_TEST_GATE:-1}" = "0" ]; then
   echo "Test-Gate: GITHOOKS_TEST_GATE=0 - uebersprungen."
 elif [ -f "$_gate_conf" ]; then
+  # CRLF macht das Gate still: der letzte Wert endet auf \r, das Praefix passt
+  # nicht mehr und der Testbefehl heisst "...\r". Dann lieber abbrechen.
+  # case statt grep: die Git-Bash-Grep findet ein CR in der Datei nicht.
+  _gate_head="$(cat "$_gate_conf")"
+  case "$_gate_head" in
+    *$'\r'*)
+      echo "" >&2
+      echo "${_gate_label} BLOCKIERT - $_gate_conf enthaelt CRLF-Zeilenenden." >&2
+      echo "  Das Gate wuerde still ueberspringen oder einen Befehl mit '\\r' starten." >&2
+      echo "  Fix: Datei auf LF umstellen (Editor; .gitattributes: .githooks/* text eol=lf)." >&2
+      exit 1
+      ;;
+  esac
+  unset _gate_head
   set +e
   _gate_prefixes=""
   _gate_python=""
