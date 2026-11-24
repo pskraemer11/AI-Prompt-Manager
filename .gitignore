@@ -15,6 +15,9 @@ node_modules/
 coverage/
 *.log
 
+# Review reports
+.full-review/
+
 # =================== Local project docs ===================
 # Of the documentation, only README.md and README_de.md are published.
 # The changelog, plan and compaction notes stay in the local workspace
